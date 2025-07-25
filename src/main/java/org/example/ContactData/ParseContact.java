@@ -46,10 +46,10 @@ public class ParseContact
 
             addDataToContact(contact, key, val1);
 
-            System.out.println(key + ":");
-            System.out.println("\t1: " + val1);
-            System.out.println("\t2: " + val2);
-            System.out.println();
+//            System.out.println(key + ":");
+//            System.out.println("\t1: " + val1);
+//            System.out.println("\t2: " + val2);
+//            System.out.println();
         }
         return contact;
     }

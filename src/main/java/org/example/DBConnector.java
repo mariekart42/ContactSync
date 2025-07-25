@@ -16,9 +16,9 @@ public class DBConnector implements AutoCloseable{
         {
             final Properties oAuthProperties = new Properties();
             oAuthProperties.load(App.class.getResourceAsStream("/oAuth.properties"));
-            String url = oAuthProperties.getProperty("postgres.url");;
-            String username = oAuthProperties.getProperty("postgres.username");;
-            String password = oAuthProperties.getProperty("postgres.password");;
+            String url = oAuthProperties.getProperty("postgres.url");
+            String username = oAuthProperties.getProperty("postgres.username");
+            String password = oAuthProperties.getProperty("postgres.password");
             connection = DriverManager.getConnection(url, username, password);
         }
         catch (SQLException e)
@@ -81,7 +81,7 @@ public class DBConnector implements AutoCloseable{
         return result;
     }
 
-    // gets all the newest information about a specific contact, here imitated with username, later with guid
+    // gets all the newest information about a specific contact, here imitated with username, later with luid
     public static String executeMockGetContactMapSQLFunction(String username, String avoidFields) throws SQLException
     {
         Connection connection = getInstance().getConnection();
@@ -98,8 +98,6 @@ public class DBConnector implements AutoCloseable{
         stmt.close();
         return extractLinesToAvoid(result, avoidFields);
     }
-
-
 
 
     // function takes list of Adito data of a contact and extracts all lines defined in 'avoidFields'
@@ -131,7 +129,6 @@ public class DBConnector implements AutoCloseable{
             // Each line looks like: "key=value"
             if (line.contains("=")) {
                 String key = line.substring(0, line.indexOf("=")).trim();
-                String value = line.substring(line.indexOf("=") + 1).trim();
 
                 // If the key is in the avoid list and it's not in "always include", set value to an empty string
                 if (toAvoid.contains(key) && !alwaysInclude.contains(key))
