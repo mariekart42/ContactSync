@@ -1,13 +1,10 @@
 package org.example;
 
-import com.microsoft.graph.models.*;
+import com.microsoft.graph.models.Contact;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
-import com.microsoft.graph.users.item.contacts.item.extensions.ExtensionsRequestBuilder;
+import org.example.ContactData.ParseContact;
 
-import java.sql.Connection;
 import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
 
 public class App {
 
@@ -29,7 +26,7 @@ public class App {
 //            }
 //-----------------------------------------------------------------------------------------------------------------
 // * *  GET user with id = email
-//            User specificUser = TestCRUDRequests.getSpecificUser(graphClient, USER);
+//            ParseContact specificUser = TestCRUDRequests.getSpecificUser(graphClient, USER);
 //            System.out.println(specificUser.getDisplayName());
 //-----------------------------------------------------------------------------------------------------------------
 // * *  GET contacts of a specific user with id = email
@@ -117,7 +114,7 @@ public class App {
 //            System.out.println("Folder Id to delete: " + folderID);
 //            TestCRUDRequests.deleteFolderFromSpecificUser(graphClient, USER, folderID);
 //-----------------------------------------------------------------------------------------------------------------
-// * *  POST Contact in a specific folder
+// * *  POST ParseContact in a specific folder
 //            TestMyContact contact = new TestMyContact("in someNewFolder/childFolder", "Nomnom", "sa@gmail.lol", "sasa", "999888");
 //            TestCRUDRequests.createNewUserInSpecificFolder(graphClient, USER, folderID, contact);
 //-----------------------------------------------------------------------------------------------------------------
@@ -164,14 +161,18 @@ public class App {
 //                TestCRUDRequests.createNewUserInSpecificFolder(graphClient, USER, kidsFolderID, contact);
 //
 //            }
-//
+//-----------------------------------------------------------------------------------------------------------------
+// * *  UPDATE folder name
+//            String contactFolderID = TestCRUDRequests.getSpecificContactFolderIdFromDisplayName(graphClient, USER, "NEW DISPLAY NAME");
+//            TestCRUDRequests.updateContactFolderName(graphClient, USER, contactFolderID ,"some even newer folder");
+//-----------------------------------------------------------------------------------------------------------------
+// * *  UPDATE some info in contact
+            String contactID = TestCRUDRequests.getSpecificContactIdFromDisplayName(graphClient, USER, "TESTTESTvorname TESTTESTname");
+//            TestCRUDRequests.updateInfoInContact(graphClient, USER, contactID);
+//-----------------------------------------------------------------------------------------------------------------
+// * *  UPDATE contact name
+//            TestCRUDRequests.updateContactName(graphClient, USER, contactID, "NEW NAME");
 
-
-//
-//            String id = TestCRUDRequests.getSpecificContactIdFromDisplayName(graphClient, USER, "Anrede Name Namenszusatz");
-//
-////            Contact oo = graphClient.users().byUserId(USER).contacts().byContactId(id).get();
-////            System.out.println(oo.getDisplayName());
 //
 //            TestCRUDRequests.printAllContactDataWithAllFoldersAndContacts(graphClient, USER, id);
 //
@@ -181,18 +182,58 @@ public class App {
 //
 //
 
-//            for (String s : AditoRequests.getSomething())
-//            {
-//                System.out.println("Something: " + s);
-//            }
 
-        AditoRequests.printAllYouGot();
+            // TEST GUY
+            // ID: AAMkADg4NWM4MjMxLTc0ZjQtNGU4ZC05ZDc2LTgwMDJkNjAyNWE0YwBGAAAAAABb4L58lBuvQaM7Snxz45CZBwDKuT-HM9gZQIxqxJFFZgGEAAAAAAEOAADKuT-HM9gZQIxqxJFFZgGEAAAbPIQyAAA=
+            // NAME: TESTTESTvorname TESTTESTname
+            String testLUID = "AAMkADg4NWM4MjMxLTc0ZjQtNGU4ZC05ZDc2LTgwMDJkNjAyNWE0YwBGAAAAAABb4L58lBuvQaM7Snxz45CZBwDKuT-HM9gZQIxqxJFFZgGEAAAAAAEOAADKuT-HM9gZQIxqxJFFZgGEAAAbPIQyAAA=";
+
+            String avoidFields = "*web*";
+            String newestAditoData = AditoRequests.getResultFromMockSQLFunction("", avoidFields);
+
+            String luid = testLUID; // now hardcoded, later extract from syncabonnement.luid
+
+
+            ResultSet toExternalData = DBConnector.executeQuery("SELECT s.to_external FROM SYNCABONNEMENT s where s.luid='"+luid+"'");
+            toExternalData.next();
+
+
+            Contact contact = ParseContact.getContact(newestAditoData, toExternalData.getString("to_external"), avoidFields);
+            OutlookContactUpdater.updateContact(contact, USER, luid);
+
 
             System.out.println();
         }
         catch (Exception e)
         {
             System.out.println(e);
+        }
+    }
+
+
+
+    static void printAsBytes(String str)
+    {
+        // Convert the string to a byte array using the default charset (UTF-8)
+        byte[] bytes = str.getBytes();
+
+        // Print the byte values
+        System.out.println("Byte values of the string:");
+        for (byte b : bytes) {
+            System.out.print(b + " ");
+        }
+
+        System.out.println();
+
+        // To visualize characters and hidden control characters
+        System.out.println("\nVisual representation of the string:");
+        for (byte b : bytes) {
+            // If it's a printable character, print it, otherwise show the byte value
+            if (b >= 32 && b <= 126) {
+                System.out.print((char) b);
+            } else {
+                System.out.print("[" + b + "] ");
+            }
         }
     }
 }

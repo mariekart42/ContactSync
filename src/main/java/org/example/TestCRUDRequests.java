@@ -4,10 +4,19 @@ import com.microsoft.graph.models.*;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 
 import java.util.LinkedList;
-import java.util.Map;
 
 public class TestCRUDRequests {
 
+
+
+
+    public enum INFO
+    {
+        HOME_ADDRESS_STREET,
+        HOME_ADDRESS_CITY,
+        HOME_ADDRESS_STATE,
+
+    }
     // GET specific user with all his infos
     public static User getSpecificUser(GraphServiceClient graphClient, String userID)
     {
@@ -44,7 +53,7 @@ public class TestCRUDRequests {
                 requestConfiguration.headers.add("ConsistencyLevel", "eventual");
             });
         if (dude.getValue() == null || dude.getValue().isEmpty())
-            throw new Exception("Cant retrieve Contact Id cause display name not found");
+            throw new Exception("Cant retrieve ParseContact Id cause display name not found");
         if (dude.getOdataCount() != 1)
             throw new Exception("Received more than one entry with this name. Should not happen lol");
         return dude.getValue().getFirst().getId();
@@ -164,7 +173,7 @@ public class TestCRUDRequests {
     }
 
 
-    // POST new User in specific folder
+    // POST new ParseContact in specific folder
     public static void createNewUserInSpecificFolder(GraphServiceClient graphClient, String userID, String folderID, TestMyContact newContact)
     {
         Contact contact = new Contact();
@@ -187,5 +196,48 @@ public class TestCRUDRequests {
     public static void deleteFolderFromSpecificUser(GraphServiceClient graphClient, String userID, String folderID)
     {
         graphClient.users().byUserId(userID).contactFolders().byContactFolderId(folderID).delete();
+    }
+
+
+    // UPDATE soe info in a specific contact
+    public static void updateInfoInContact(GraphServiceClient graphClient, String userID, String contactID)
+    {
+        Contact contact = new Contact();
+        PhysicalAddress homeAddress = new PhysicalAddress();
+        homeAddress.setStreet("NEW STREET");
+        homeAddress.setCity("NEW CITY");
+        homeAddress.setState("NEW STATE");
+        contact.setHomeAddress(homeAddress);
+        graphClient.users().byUserId(userID).contacts().byContactId(contactID).patch(contact);
+    }
+
+
+    // UPDATE contact folder name of a specific contact
+    public static void updateContactFolderName(GraphServiceClient graphClient, String userID, String folderID, String newName)
+    {
+        ContactFolder contactFolder = new ContactFolder();
+        contactFolder.setDisplayName(newName);
+        graphClient.users().byUserId(userID).contactFolders().byContactFolderId(folderID).patch(contactFolder);
+    }
+
+    public static String getSpecificContactFolderIdFromDisplayName(GraphServiceClient graphClient, String userID, String displayName) throws Exception {
+        var folder = graphClient.users().byUserId(userID).contactFolders().get(requestConfiguration -> {
+            requestConfiguration.queryParameters.filter = "(displayName eq '" + displayName + "')";
+            requestConfiguration.queryParameters.count = true;
+            requestConfiguration.headers.add("ConsistencyLevel", "eventual");
+        });
+        if (folder.getValue() == null || folder.getValue().isEmpty())
+            throw new Exception("Cant retrieve ParseContact Folder Id cause display name not found");
+        if (folder.getOdataCount() != 1)
+            throw new Exception("Received more than one entry with this name. Should not happen lol");
+        return folder.getValue().getFirst().getId();
+    }
+
+    public static void updateContactName(GraphServiceClient graphClient, String user, String contactID, String newName) {
+
+        Contact contact = new Contact();
+        contact.setDisplayName(newName);
+        graphClient.users().byUserId(user).contacts().byContactId(contactID).patch(contact);
+
     }
 }

@@ -8,6 +8,8 @@ down:
 
 restart: down up
 
+re: fclean up
+
 logs:
 	docker-compose -f $(COMPOSE_FILE) logs -f
 
