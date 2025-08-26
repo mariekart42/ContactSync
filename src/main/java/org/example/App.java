@@ -37,10 +37,11 @@ public class App {
                 entry.put("to_external", aboData.getString("to_external"));
 
 
-                ResultSet deviceData = DBConnector.executeQuery("select avoidfields from syncabonnement abo join syncprincipal p ON abo.principal = p.syncprincipalid JOIN syncdevice de ON p.syncdevice_id = de.syncdeviceid where abo.luid = '"+aboData.getString("luid")+"'");
+                ResultSet deviceData = DBConnector.executeQuery("select avoidfields, device from syncabonnement abo join syncprincipal p ON abo.principal = p.syncprincipalid JOIN syncdevice de ON p.syncdevice_id = de.syncdeviceid where abo.luid = '"+aboData.getString("luid")+"'");
                 if (deviceData.next())
                 {
                     entry.put("avoid", deviceData.getString("avoidfields"));
+                    entry.put("device", deviceData.getString("device"));
                 }
 
                 contactMetaData.add(entry);
@@ -64,8 +65,6 @@ public class App {
 
                 OutlookContactUpdater.updateContact(contact, USER, contactMeta.get("luid"), status);
             }
-
-
 
 
             frame.pack();
