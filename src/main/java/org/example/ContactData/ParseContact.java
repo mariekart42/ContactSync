@@ -12,26 +12,23 @@ import java.util.Map;
 
 public class ParseContact
 {
-
-    static PhysicalAddress _homeAddress = new PhysicalAddress();
-    static PhysicalAddress _businessAddress = new PhysicalAddress();
-    static List<String> _businessPhones = new ArrayList<>();
-    static List<EmailAddress> _emailAddresses = new ArrayList<>();
+    PhysicalAddress _homeAddress = new PhysicalAddress();
+    PhysicalAddress _businessAddress = new PhysicalAddress();
+    List<String> _businessPhones = new ArrayList<>();
+    List<EmailAddress> _emailAddresses = new ArrayList<>();
 
 
     // function returns a MSGraph Contact object with all NEW data received from adito
     // it considers to_external and only adds attributes that have changed values
     // fields defined in avoidFields are considered
     // return: Contact object with only attributes oth changed data
-    public static Contact getContact(String aditoData, String toExternal, String avoidFields)
+    public Contact getContact(String aditoData, String toExternal, String avoidFields)
     {
-        System.out.println(aditoData);
-        System.out.println(toExternal);
         Map<String, String> aditoMap = parseToMap(aditoData);
         Map<String, String> toExternalMap = parseToMap(toExternal);
         clearFields(toExternalMap, avoidFields);
 
-        if (aditoData.equalsIgnoreCase(toExternal))
+        if (aditoData.equalsIgnoreCase(toExternal) || aditoMap.equals(toExternalMap))
             return null; // nothing to update cause maps are identical
 
         Contact contact = new Contact();
@@ -45,12 +42,19 @@ public class ParseContact
                 continue;
 
             addDataToContact(contact, key, val1);
-
-//            System.out.println(key + ":");
-//            System.out.println("\t1: " + val1);
-//            System.out.println("\t2: " + val2);
-//            System.out.println();
         }
+        if (_homeAddress.getStreet() != null || _homeAddress.getPostalCode() != null || _homeAddress.getCity() != null || _homeAddress.getState() != null)
+            contact.setHomeAddress(_homeAddress);
+        if (_businessAddress.getStreet() != null || _businessAddress.getPostalCode() != null || _businessAddress.getCity() != null)
+            contact.setBusinessAddress(_businessAddress);
+        if (!_businessPhones.isEmpty())
+            contact.setBusinessPhones(_businessPhones);
+        if (!_emailAddresses.isEmpty())
+            contact.setEmailAddresses(_emailAddresses);
+        _emailAddresses.clear();
+        _businessPhones.clear();
+        _emailAddresses.clear();
+        _emailAddresses.clear();
         return contact;
     }
 
@@ -64,7 +68,7 @@ public class ParseContact
     //       - companyphone
 
     // function adds the specific values from adito to the Contact object
-    private static void addDataToContact(Contact contact, String key, String value)
+    protected void addDataToContact(Contact contact, String key, String value)
     {
         switch (key)
         {
@@ -122,21 +126,23 @@ public class ParseContact
                 contact.setPersonalNotes(value); break;
         }
 
-        if (_homeAddress.getStreet() != null || _homeAddress.getPostalCode() != null || _homeAddress.getCity() != null || _homeAddress.getState() != null)
-            contact.setHomeAddress(_homeAddress);
-        if (_businessAddress.getStreet() != null || _businessAddress.getPostalCode() != null || _businessAddress.getCity() != null)
-            contact.setBusinessAddress(_businessAddress);
-        if (!_businessPhones.isEmpty())
-            contact.setBusinessPhones(_businessPhones);
-        if (!_emailAddresses.isEmpty())
-            contact.setEmailAddresses(_emailAddresses);
+//        if (_homeAddress.getStreet() != null || _homeAddress.getPostalCode() != null || _homeAddress.getCity() != null || _homeAddress.getState() != null)
+//            contact.setHomeAddress(_homeAddress);
+//        if (_businessAddress.getStreet() != null || _businessAddress.getPostalCode() != null || _businessAddress.getCity() != null)
+//            contact.setBusinessAddress(_businessAddress);
+//        if (!_businessPhones.isEmpty())
+//            contact.setBusinessPhones(_businessPhones);
+//        if (!_emailAddresses.isEmpty())
+//            contact.setEmailAddresses(_emailAddresses);
     }
 
 
     // function removes all values in the map that represents a value of an attribute that the user specified on avoidFields
     // => value of attribute will be cleared and ttherefore not considered to be updated to Outlook
-    public static void clearFields(Map<String, String> map, String fieldsToClear)
+    public void clearFields(Map<String, String> map, String fieldsToClear)
     {
+        if (fieldsToClear == null || fieldsToClear.isEmpty())
+            return;
         String[] keys = fieldsToClear.replace("*", "").split(",");
         // fields that the user can't avoid even if specified in avoidFields
         List<String> mandatoryFields = List.of("mapversion", "name", "vorname", "firma", "strasse", "ort", "plz");
@@ -148,8 +154,10 @@ public class ParseContact
         }
     }
 
-    private static Map<String, String> parseToMap(String data)
+    private Map<String, String> parseToMap(String data)
     {
+        if (data == null || data.isEmpty())
+            return null;
         Map<String, String> map = new LinkedHashMap<>();
         String[] lines = data.split("\\r?\\n");
         for (String line : lines)

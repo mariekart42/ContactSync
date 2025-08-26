@@ -81,15 +81,15 @@ public class DBConnector implements AutoCloseable{
         return result;
     }
 
-    // gets all the newest information about a specific contact, here imitated with username, later with luid
-    public static String executeMockGetContactMapSQLFunction(String username, String avoidFields) throws SQLException
+    // gets all the newest information about a specific contact, here imitated with luid, later with guid
+    public static String executeMockGetContactMapSQLFunction(String guid, String avoidFields) throws SQLException
     {
         Connection connection = getInstance().getConnection();
         CallableStatement stmt = connection.prepareCall("{ ? = call get_latest_contact_properties(?) }");
 
         stmt.registerOutParameter(1, Types.VARCHAR);
 
-        stmt.setString(2, username);
+        stmt.setString(2, guid);
 
         stmt.execute();
 
@@ -108,6 +108,9 @@ public class DBConnector implements AutoCloseable{
     private static String extractLinesToAvoid(String data, String avoidFields)
     {
         // Prepare the list of fields to avoid (e.g., mobile, bfax)
+        if (avoidFields == null || avoidFields.isEmpty())
+            return data; // check if i should return data or something else
+
         String[] parts = avoidFields.split(",");
         List<String> toAvoid = new ArrayList<>();
         for (String part : parts)
