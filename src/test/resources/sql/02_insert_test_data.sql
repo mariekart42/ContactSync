@@ -86,34 +86,34 @@ values (10, 'Thomas Sierpinski', 'Thomas Sierpinski');
 
 
 insert into syncdevice (SYNCDEVICEID, DEVICE, DESCRIPTION, TZID, DEVICESPECIFICS, AVOIDFIELDS)
-values (1, 'roemer@kieback-peter.de/AditoKontakte', 'Exchange', 'Europe/Berlin', 'fileAsMapping=LastCommaFirst', null);
+values (1, 'roemer@kieback-peter.de/AditoKontakteee1', 'Exchange', 'Europe/Berlin', 'fileAsMapping=LastCommaFirst', null);
 
 insert into syncdevice (SYNCDEVICEID, DEVICE, DESCRIPTION, TZID, DEVICESPECIFICS, AVOIDFIELDS)
 values (2, 'kolb-kl@kieback-peter.de/', 'Exchange', 'Europe/Berlin', 'fileAsMapping=LastCommaFirst', '*web*');
 
 insert into syncdevice (SYNCDEVICEID, DEVICE, DESCRIPTION, TZID, DEVICESPECIFICS, AVOIDFIELDS)
-values (3, 'boehm@kieback-peter.de/AditoKontakte', 'Exchange', 'Europe/Berlin', 'fileAsMapping=LastCommaFirst', '*');
+values (3, 'boehm@kieback-peter.de/AditoKontakteee2/lol1/lol2', 'Exchange', 'Europe/Berlin', 'fileAsMapping=LastCommaFirst', '*');
 
 insert into syncdevice (SYNCDEVICEID, DEVICE, DESCRIPTION, TZID, DEVICESPECIFICS, AVOIDFIELDS)
-values (4, 'walbroehl@kieback-peter.de/AditoKontakte', 'Exchange', 'Europe/Berlin', 'fileAsMapping=LastFirstCompany', '*privat*otherfax*bfax*info*');
+values (4, 'walbroehl@kieback-peter.de/AditoKontakteee3', 'Exchange', 'Europe/Berlin', 'fileAsMapping=LastFirstCompany', '*privat*otherfax*bfax*info*');
 
 insert into syncdevice (SYNCDEVICEID, DEVICE, DESCRIPTION, TZID, DEVICESPECIFICS, AVOIDFIELDS)
-values (5, 'peetz@kieback-peter.de/AditoKontakte', 'Exchange', 'Europe/Berlin', 'fileAsMapping=LastCommaFirst', null);
+values (5, 'peetz@kieback-peter.de/AditoKontakteee4', 'Exchange', 'Europe/Berlin', 'fileAsMapping=LastCommaFirst', null);
 
 insert into syncdevice (SYNCDEVICEID, DEVICE, DESCRIPTION, TZID, DEVICESPECIFICS, AVOIDFIELDS)
-values (6, 'janoschek@kieback-peter.de/AditoKontakte', 'Exchange', 'Europe/Berlin', 'fileAsMapping=LastCommaFirst', null);
+values (6, 'janoschek@kieback-peter.de/AditoKontakteee5', 'Exchange', 'Europe/Berlin', 'fileAsMapping=LastCommaFirst', null);
 
 insert into syncdevice (SYNCDEVICEID, DEVICE, DESCRIPTION, TZID, DEVICESPECIFICS, AVOIDFIELDS)
 values (7, 'wassermann@kieback-peter.de/', 'Exchange', 'Europe/Berlin', 'fileAsMapping=LastCommaFirst', null);
 
 insert into syncdevice (SYNCDEVICEID, DEVICE, DESCRIPTION, TZID, DEVICESPECIFICS, AVOIDFIELDS)
-values (8, 'fuehrer@kieback-peter.de/AditoKontakte', 'Exchange', 'Europe/Berlin', 'fileAsMapping=LastCommaFirst', null);
+values (8, 'fuehrer@kieback-peter.de/AditoKontakteee6', 'Exchange', 'Europe/Berlin', 'fileAsMapping=LastCommaFirst', null);
 
 insert into syncdevice (SYNCDEVICEID, DEVICE, DESCRIPTION, TZID, DEVICESPECIFICS, AVOIDFIELDS)
-values (9, 'drechsel@kieback-peter.de/AditoKontakte', 'Exchange', 'Europe/Berlin', 'fileAsMapping=LastCommaFirst', '*anrede*funktion*privat*bphone2*bfax*info*');
+values (9, 'drechsel@kieback-peter.de/AditoKontakteee7', 'Exchange', 'Europe/Berlin', 'fileAsMapping=LastCommaFirst', '*anrede*funktion*privat*bphone2*bfax*info*');
 
 insert into syncdevice (SYNCDEVICEID, DEVICE, DESCRIPTION, TZID, DEVICESPECIFICS, AVOIDFIELDS)
-values (10, 'motschmann@kieback-peter.de/AditoKontakte', 'Exchange', 'Europe/Berlin', 'fileAsMapping=LastCommaFirst', null);
+values (10, 'motschmann@kieback-peter.de/AditoKontakteee8', 'Exchange', 'Europe/Berlin', 'fileAsMapping=LastCommaFirst', null);
 
 
 

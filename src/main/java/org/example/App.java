@@ -14,7 +14,7 @@ import java.util.Map;
 
 public class App {
 
-    private static final String USER = "mensing@kieback-peter.de";
+    protected static final String USER = "mensing@kieback-peter.de";
 
     public static void main(String[] args)
     {
@@ -50,7 +50,7 @@ public class App {
             // contactMetaData is now a list of Maps containing all contacts syncabonnement data and avoid fields
 
             ParseContact parse = new ParseContact();
-            for (var contactMeta : contactMetaData) {
+            for (Map<String, String> contactMeta : contactMetaData) {
 
                 var status = AditoRequests.getContactStatus(contactMeta);
 
@@ -63,7 +63,7 @@ public class App {
                 // add contact to aditoCategory
 //                OutlookContactUpdater.updateContactsCategory(USER, contactMeta.get("luid"));
 
-                OutlookContactUpdater.updateContact(contact, USER, contactMeta.get("luid"), status);
+                OutlookContactUpdater.updateContact(contact, contactMeta, USER,  status);
             }
 
 
