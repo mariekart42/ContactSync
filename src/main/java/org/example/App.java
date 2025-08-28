@@ -37,11 +37,12 @@ public class App {
                 entry.put("to_external", aboData.getString("to_external"));
 
 
-                ResultSet deviceData = DBConnector.executeQuery("select avoidfields, device from syncabonnement abo join syncprincipal p ON abo.principal = p.syncprincipalid JOIN syncdevice de ON p.syncdevice_id = de.syncdeviceid where abo.luid = '"+aboData.getString("luid")+"'");
+                ResultSet deviceData = DBConnector.executeQuery("select avoidfields, device, devicespecifics from syncabonnement abo join syncprincipal p ON abo.principal = p.syncprincipalid JOIN syncdevice de ON p.syncdevice_id = de.syncdeviceid where abo.luid = '"+aboData.getString("luid")+"'");
                 if (deviceData.next())
                 {
                     entry.put("avoid", deviceData.getString("avoidfields"));
                     entry.put("device", deviceData.getString("device"));
+                    entry.put("devicespecifics", deviceData.getString("devicespecifics"));
                 }
 
                 contactMetaData.add(entry);
@@ -53,17 +54,26 @@ public class App {
             for (Map<String, String> contactMeta : contactMetaData) {
 
                 var status = AditoRequests.getContactStatus(contactMeta);
+                if (status == AditoRequests.CONTACT_STATUS.TO_CHANGE)
+                {
+                    // TODO check here if device changed since last update
+
+                }
 
                 //var test = contactMeta.get("luid");
 
+                // TODO delete this:
+                contactMeta.put("guid", "5500");
+
                 String newestAditoData = AditoRequests.getResultFromMockSQLFunction(contactMeta.get("guid"), contactMeta.get("avoid"));
-                Contact contact = parse.getContact(newestAditoData, contactMeta.get("to_external"), contactMeta.get("avoid"));
+                Contact contact = parse.getContact(newestAditoData, contactMeta);
 
                 lol(textArea, frame, contact, status, contactMeta);
                 // add contact to aditoCategory
 //                OutlookContactUpdater.updateContactsCategory(USER, contactMeta.get("luid"));
 
                 OutlookContactUpdater.updateContact(contact, contactMeta, USER,  status);
+                break;// TODO delete this, just for always testing one contact
             }
 
 
@@ -81,13 +91,6 @@ public class App {
     }
 
     private static void lol(JTextArea textArea, JFrame frame, Contact contact, AditoRequests.CONTACT_STATUS status, Map<String, String> contactMeta) {
-//        JFrame frame = new JFrame("Debug UI");
-//        JTextArea textArea = new JTextArea(30, 80);
-//        textArea.setEditable(false); // nur Anzeige
-//        for (String line : data) {
-//            textArea.append(line + "\n");
-//        }
-
         if (contact == null)
         {
             textArea.append("\n\n\n\n");
@@ -117,7 +120,7 @@ public class App {
             textArea.append("No home addresses\n");
         textArea.append("Phone Numbers");
         if (contact.getBusinessPhones() != null && !contact.getBusinessPhones().isEmpty()) {
-            if (contact.getBusinessPhones().size() > 0)
+            if (!contact.getBusinessPhones().isEmpty())
                 textArea.append("Business 1  :" + contact.getBusinessPhones().get(0));
             if (contact.getBusinessPhones().size() > 1)
                 textArea.append("Business 2  :" + contact.getBusinessPhones().get(1));
@@ -151,10 +154,5 @@ public class App {
 //        }
 
          frame.add(new JScrollPane(textArea), BorderLayout.CENTER);
-
-//        frame.pack();
-//        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-//        frame.setLocationRelativeTo(null); // Fenster zentrieren
-//        frame.setVisible(true);
     }
 }

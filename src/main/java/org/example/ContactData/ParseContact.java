@@ -22,8 +22,11 @@ public class ParseContact
     // it considers to_external and only adds attributes that have changed values
     // fields defined in avoidFields are considered
     // return: Contact object with only attributes oth changed data
-    public Contact getContact(String aditoData, String toExternal, String avoidFields)
-    {
+    public Contact getContact(String aditoData, Map<String, String> contactMetaData) throws Exception {
+        String toExternal = contactMetaData.get("to_external");
+        String avoidFields = contactMetaData.get("avoid");
+        String deviceSpecifics = contactMetaData.get("devicespecifics");
+
         Map<String, String> aditoMap = parseToMap(aditoData);
         Map<String, String> toExternalMap = parseToMap(toExternal);
         clearFields(toExternalMap, avoidFields);
@@ -43,6 +46,39 @@ public class ParseContact
 
             addDataToContact(contact, key, val1);
         }
+        setAddresses(contact);
+        setFileAsAttribute(contact, deviceSpecifics);
+        return contact;
+    }
+
+    private void setFileAsAttribute(Contact contact, String devicespecifics) throws Exception {
+
+        if (devicespecifics != null && devicespecifics.startsWith("fileAsMapping="))
+            devicespecifics = devicespecifics.substring("fileAsMapping=".length());
+
+        switch (devicespecifics)
+        {
+            case "Company" -> contact.setFileAs(contact.getCompanyName()); // Firma
+            case "CompanyLastCommaFirst" -> contact.setFileAs(contact.getCompanyName()+contact.getSurname()+","+contact.getGivenName()); // FirmaNachname,Vorname
+            case "CompanyLastFirst" -> contact.setFileAs(contact.getCompanyName()+contact.getSurname()+contact.getGivenName()); // FirmaNachnameVorname
+            case "CompanyLastSpaceFirst" -> contact.setFileAs(contact.getCompanyName()+contact.getSurname()+" "+contact.getGivenName()); // FirmaNachname Vorname
+            case "FirstSpaceLast" -> contact.setFileAs(contact.getGivenName()+" "+contact.getSurname()); // Vorname Nachname
+            case "LastCommaFirst" -> contact.setFileAs(contact.getSurname()+","+contact.getGivenName()); // Nachname,Vorname
+            case "LastCommaFirstCompany" -> contact.setFileAs(contact.getSurname()+","+contact.getGivenName()+contact.getCompanyName()); // Nachname,VornameFirma
+            case "LastFirst" -> contact.setFileAs(contact.getSurname()+contact.getGivenName()); // NachnameVorname
+            case "LastFirstCompany" -> contact.setFileAs(contact.getSurname()+contact.getGivenName()+contact.getCompanyName()); // NachnameVornameFirma
+            case "LastFirstSuffix" -> contact.setFileAs(contact.getSurname()+contact.getGivenName()); // NachnameVornameZusatz // TODO figure out what msgraph attribute represents 'Zusatz'
+            case "LastSpaceFirst" -> contact.setFileAs(contact.getSurname()+" "+contact.getGivenName()); // Nachname Vorname
+            case "LastSpaceFirstCompany" -> contact.setFileAs(contact.getSurname()+" "+contact.getGivenName()+contact.getCompanyName()); // Nachname VornameFirma
+            case null, default ->
+            // TODO should the error if devicespecifics not found be in the syncresult? or just ignore?
+                throw new Exception("devicespecifics was defined wron in adito: " + devicespecifics);
+
+        }
+    }
+
+    private void setAddresses(Contact contact)
+    {
         if (_homeAddress.getStreet() != null || _homeAddress.getPostalCode() != null || _homeAddress.getCity() != null || _homeAddress.getState() != null)
             contact.setHomeAddress(_homeAddress);
         if (_businessAddress.getStreet() != null || _businessAddress.getPostalCode() != null || _businessAddress.getCity() != null)
@@ -54,10 +90,7 @@ public class ParseContact
         _emailAddresses.clear();
         _businessPhones.clear();
         _emailAddresses.clear();
-        _emailAddresses.clear();
-        return contact;
     }
-
 
 
     // TODO: figure out:
@@ -125,15 +158,6 @@ public class ParseContact
             case "info":
                 contact.setPersonalNotes(value); break;
         }
-
-//        if (_homeAddress.getStreet() != null || _homeAddress.getPostalCode() != null || _homeAddress.getCity() != null || _homeAddress.getState() != null)
-//            contact.setHomeAddress(_homeAddress);
-//        if (_businessAddress.getStreet() != null || _businessAddress.getPostalCode() != null || _businessAddress.getCity() != null)
-//            contact.setBusinessAddress(_businessAddress);
-//        if (!_businessPhones.isEmpty())
-//            contact.setBusinessPhones(_businessPhones);
-//        if (!_emailAddresses.isEmpty())
-//            contact.setEmailAddresses(_emailAddresses);
     }
 
 
