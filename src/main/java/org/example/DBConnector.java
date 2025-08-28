@@ -6,9 +6,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
-public class DBConnector implements AutoCloseable{
+
+public class DBConnector implements AutoCloseable
+{
     private static DBConnector instance;
     private Connection connection;
+
 
     private DBConnector()
     {
@@ -31,6 +34,7 @@ public class DBConnector implements AutoCloseable{
         }
     }
 
+
     private static DBConnector getInstance()
     {
         if (instance == null)
@@ -44,11 +48,13 @@ public class DBConnector implements AutoCloseable{
         return instance;
     }
 
+
     Connection getConnection() {
         if (connection == null)
             return connection = getInstance().getConnection();
         return connection;
     }
+
 
     public static ResultSet executeQuery(String query) throws SQLException
     {
@@ -81,7 +87,8 @@ public class DBConnector implements AutoCloseable{
         return result;
     }
 
-    // gets all the newest information about a specific contact, here imitated with luid, later with guid
+
+    // gets all the newest information about a specific contact
     public static String executeMockGetContactMapSQLFunction(String guid, String avoidFields) throws SQLException
     {
         Connection connection = getInstance().getConnection();
@@ -128,7 +135,8 @@ public class DBConnector implements AutoCloseable{
         StringBuilder result = new StringBuilder();
         String[] lines = data.split("\n");
 
-        for (String line : lines) {
+        for (String line : lines)
+        {
             // Each line looks like: "key=value"
             if (line.contains("=")) {
                 String key = line.substring(0, line.indexOf("=")).trim();
@@ -137,12 +145,11 @@ public class DBConnector implements AutoCloseable{
                 if (toAvoid.contains(key) && !alwaysInclude.contains(key))
                     result.append("        ").append(key).append("=\n"); // Keep key, erase value
                 else
-                    result.append(line).append("\n"); // Keep key-value pair
+                    result.append(line).append("\n");
             }
             else
                 result.append(line).append("\n"); // If there's no "=" in the line, just keep it (for cases like multiline strings)
         }
-
         return result.toString();
     }
 

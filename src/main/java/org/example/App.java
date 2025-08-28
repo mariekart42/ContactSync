@@ -2,79 +2,46 @@ package org.example;
 
 import com.microsoft.graph.models.Contact;
 import org.example.ContactData.ParseContact;
-//import org.junit.jupiter.api.Test;
-
 import javax.swing.*;
 import java.awt.*;
 import java.sql.ResultSet;
-import java.util.ArrayList;
+import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 
 
 public class App {
 
-    protected static final String USER = "mensing@kieback-peter.de";
+    protected static final String USER = "mensing@kieback-peter.de"; // now for testing. TODO delete later
 
     public static void main(String[] args)
     {
         JFrame frame = new JFrame("Debug UI");
         JTextArea textArea = new JTextArea(30, 80);
         textArea.setEditable(false); // nur Anzeige
-        try {
+
+
+        try
+        {
             // get data via sql
-            ResultSet aboData = DBConnector.executeQuery("SELECT * FROM syncabonnement");
-            ArrayList<Map<String, String>> contactMetaData = new ArrayList<>();
+            ResultSet aboData = DBConnector.executeQuery("select a.guid,a.luid,a.abostart,a.aboende,a.changed,a.synced,a.to_external,d.device,d.devicespecifics,d.avoidfields from syncabonnement a join syncprincipal p ON a.principal=p.syncprincipalid JOIN syncdevice d ON p.syncdevice_id=d.syncdeviceid");
+
             while (aboData.next())
             {
-                Map<String, String> entry = new HashMap<>();
-                entry.put("luid", aboData.getString("luid"));
-                entry.put("guid", aboData.getString("guid"));
-                entry.put("abostart", aboData.getString("abostart"));
-                entry.put("aboende", aboData.getString("aboende"));
-                entry.put("changed", aboData.getString("changed"));
-                entry.put("synced", aboData.getString("synced"));
-                entry.put("to_external", aboData.getString("to_external"));
+                ParseContact parse = new ParseContact();
+                Map<String, String> contactMetaData = getContactMetaData(aboData);
 
+                var status = AditoRequests.getContactStatus(contactMetaData);
 
-                ResultSet deviceData = DBConnector.executeQuery("select avoidfields, device, devicespecifics from syncabonnement abo join syncprincipal p ON abo.principal = p.syncprincipalid JOIN syncdevice de ON p.syncdevice_id = de.syncdeviceid where abo.luid = '"+aboData.getString("luid")+"'");
-                if (deviceData.next())
-                {
-                    entry.put("avoid", deviceData.getString("avoidfields"));
-                    entry.put("device", deviceData.getString("device"));
-                    entry.put("devicespecifics", deviceData.getString("devicespecifics"));
-                }
+                contactMetaData.put("guid", "5500"); // TODO delete this
 
-                contactMetaData.add(entry);
+                Contact contact = parse.getContact(AditoRequests.getResultFromMockSQLFunction(contactMetaData), contactMetaData);
+                OutlookContactUpdater.updateContact(contact, contactMetaData, status);
+
+                lol(textArea, frame, contact, status, contactMetaData);// TODO delete this
+                break;// TODO and this
             }
 
-            // contactMetaData is now a list of Maps containing all contacts syncabonnement data and avoid fields
-
-            ParseContact parse = new ParseContact();
-            for (Map<String, String> contactMeta : contactMetaData) {
-
-                var status = AditoRequests.getContactStatus(contactMeta);
-                if (status == AditoRequests.CONTACT_STATUS.TO_CHANGE)
-                {
-                    // TODO check here if device changed since last update
-
-                }
-
-                //var test = contactMeta.get("luid");
-
-                // TODO delete this:
-                contactMeta.put("guid", "5500");
-
-                String newestAditoData = AditoRequests.getResultFromMockSQLFunction(contactMeta.get("guid"), contactMeta.get("avoid"));
-                Contact contact = parse.getContact(newestAditoData, contactMeta);
-
-                lol(textArea, frame, contact, status, contactMeta);
-                // add contact to aditoCategory
-//                OutlookContactUpdater.updateContactsCategory(USER, contactMeta.get("luid"));
-
-                OutlookContactUpdater.updateContact(contact, contactMeta, USER,  status);
-                break;// TODO delete this, just for always testing one contact
-            }
 
 
             frame.pack();
@@ -89,6 +56,30 @@ public class App {
             e.printStackTrace();
         }
     }
+
+    private static Map<String, String> getContactMetaData(ResultSet aboData) throws SQLException {
+        Map<String, String> map = new HashMap<>();
+        map.put("luid", aboData.getString("luid"));
+        map.put("guid", aboData.getString("guid"));
+        map.put("abostart", aboData.getString("abostart"));
+        map.put("aboende", aboData.getString("aboende"));
+        map.put("changed", aboData.getString("changed"));
+        map.put("synced", aboData.getString("synced"));
+        map.put("to_external", aboData.getString("to_external"));
+        map.put("avoid", aboData.getString("avoidfields"));
+        map.put("device", aboData.getString("device"));
+        map.put("devicespecifics", aboData.getString("devicespecifics"));
+        return map;
+    }
+
+
+
+
+
+
+
+
+
 
     private static void lol(JTextArea textArea, JFrame frame, Contact contact, AditoRequests.CONTACT_STATUS status, Map<String, String> contactMeta) {
         if (contact == null)

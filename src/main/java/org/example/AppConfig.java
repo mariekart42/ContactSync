@@ -4,9 +4,11 @@ import com.azure.identity.ClientSecretCredential;
 import com.azure.identity.ClientSecretCredentialBuilder;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 
+
 public class AppConfig {
 
-    public  GraphServiceClient getGraphServiceClient() throws Exception {
+    public  GraphServiceClient getGraphServiceClient() throws Exception
+    {
         GraphCredentials credentials = GraphCredentials.fromOAuthProperties();
         if (credentials == null)
             throw new Exception("Unable to retrieve Access Token.");
@@ -19,9 +21,8 @@ public class AppConfig {
                 .clientSecret(credentials.getClientSecret())
                 .build();
 
-        if (null == scopes || null == credential) {
+        if (null == scopes || null == credential)
             throw new Exception("Unable to retrieve valid Credentials");
-        }
 
         return new GraphServiceClient(credential, scopes);
     }

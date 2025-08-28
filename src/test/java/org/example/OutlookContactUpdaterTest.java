@@ -22,7 +22,7 @@ class OutlookContactUpdaterTest {
         contactMetaData.put("luid", null);
         contactMetaData.put("device", "mensing@kieback-peter.de/");
 
-        OutlookContactUpdater.updateContact(contact, contactMetaData, App.USER, CONTACT_STATUS.TO_CREATE);
+        OutlookContactUpdater.updateContact(contact, contactMetaData, CONTACT_STATUS.TO_CREATE);
 
         AppConfig config = new AppConfig();
         var graphClient = config.getGraphServiceClient().users().byUserId(App.USER);
@@ -48,7 +48,7 @@ class OutlookContactUpdaterTest {
         Map<String, String> contactMetaData = new HashMap<>();
         contactMetaData.put("luid", "AAMkADg4NWM4MjMxLTc0ZjQtNGU4ZC05ZDc2LTgwMDJkNjAyNWE0YwBGAAAAAABb4L58lBuvQaM7Snxz45CZBwDKuT-HM9gZQIxqxJFFZgGEAAAAAAEOAADKuT-HM9gZQIxqxJFFZgGEAACPGe0-AAA=");
 
-        OutlookContactUpdater.updateContact(contact, contactMetaData, App.USER, CONTACT_STATUS.TO_CHANGE);
+        OutlookContactUpdater.updateContact(contact, contactMetaData, CONTACT_STATUS.TO_CHANGE);
 
         AppConfig config = new AppConfig();
         var graphClient = config.getGraphServiceClient().users().byUserId(App.USER);

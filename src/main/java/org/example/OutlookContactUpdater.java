@@ -6,13 +6,9 @@ import com.microsoft.graph.models.ContactFolderCollectionResponse;
 import com.microsoft.graph.users.item.UserItemRequestBuilder;
 import com.microsoft.graph.users.item.contacts.ContactsRequestBuilder;
 import org.example.AditoRequests.CONTACT_STATUS;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-
-//import static org.example.AditoRequests.CONTACT_STATUS.TO_CREATE;
-//import static org.example.AditoRequests.CONTACT_STATUS.TO_DELETE;
 
 
 public class OutlookContactUpdater {
@@ -21,11 +17,13 @@ public class OutlookContactUpdater {
     //  - catch syncresult, store it in `SYNCABONNEMENT.syncresult`
     //  - update `SYNCABONNEMENT.synced`, `SYNCABONNEMENT.changed`, `SYNCABONNEMENT.abostart` and `SYNCABONNEMENT.aboende`
     //  - create folder and put contact inside with information of 'device' -> later: move contact to new folder if it changed
-    public static void updateContact(Contact contact, Map<String, String> contactMetaData, String user, CONTACT_STATUS status)
+    public static void updateContact(Contact contact, Map<String, String> contactMetaData, CONTACT_STATUS status)
     {
-        // TODO ask about 'user'. should i retrieve user from device? if yes, user here is redundant
         String luid = contactMetaData.get("luid");
         String device = contactMetaData.get("device");
+        String userId = extractUserId(device); // user later with real data
+        // rn always use mine so we're not messing up other peoples contacts lol
+        userId = App.USER;
 
         if (contact == null)
             return;
@@ -35,33 +33,43 @@ public class OutlookContactUpdater {
         {
             var graphClient = config.getGraphServiceClient()
                     .users()
-                    .byUserId(user);
+                    .byUserId(userId);
 
             boolean categoryUpdate = addAditoCategoryToContact(graphClient.contacts(), contact, luid, status);
 
             String deepestId = ensureFolderExists(graphClient, null, extractFolderTree(device));
 
-            // question: van i update any user without knowing his folder or do i need to figure out where he is in order to change him
-            // answer: no i do not need the folder id
-
+            Contact updatedContact = null; // TODO delete later, just for info/debug
             switch (status)
             {
                 case TO_CHANGE -> {
-                    graphClient.contacts().byContactId(luid).patch(contact);
-                    System.out.println("\033[0;33mCONTACT:\n\tID: " + luid + "\n\tNAME: " + contact.getDisplayName() + "\nhas status TO_CHANGE -> PATCH to Outlook\033[0m");
+                    // TODO move contact to new folder if device changed
+                    //  if contacts device folder tree changed and we want to move him
+                    //  new folder got created already
+                    //  now we have to check if contact with id is already in that folder
+                    //  if yes -> great, do nothing
+                    //  if no  -> grr
+                    //            get all data from outlook contact
+                    //            update all new data from contact on top (that way all old data is also there)
+                    //            create this contact in the devive folder
+                    //       BUT  this would mean he gets a new luid -> needs to get updated in adito
+                    //  do when real adito data is available
+
+                    updatedContact = patchContact(graphClient, contact, luid);
+                    System.out.println("\033[0;33mCONTACT:\n\tID: " + updatedContact.getId() + "\n\tNAME: " + updatedContact.getDisplayName() + "\nhas status TO_CHANGE -> PATCH to Outlook\033[0m");
                 }
                 case TO_CREATE -> {
-                    Contact createContact = createContactInFolder(graphClient, contact, deepestId);
-                    System.out.println("\033[0;32mCONTACT:\n\tID: " + createContact.getId() + "\n\tNAME: " + createContact.getDisplayName() + "\nhas status TO_CREATE -> POST to Outlook\033[0m");
+                    updatedContact = postContact(graphClient, contact, deepestId);
+                    System.out.println("\033[0;32mCONTACT:\n\tID: " + updatedContact.getId() + "\n\tNAME: " + updatedContact.getDisplayName() + "\nhas status TO_CREATE -> POST to Outlook\033[0m");
                 }
                 case TO_DELETE -> {
-                    graphClient.contacts().byContactId(luid).delete();
+                    deleteContact(graphClient, luid);
                     System.out.println("\033[0;31mCONTACT:\n\tID: " + luid + "\n\tNAME: " + contact.getDisplayName() + "\nhas status TO_DELETE -> DELETE to Outlook\033[0m");
                 }
                 case UNCHANGED -> {
                     if (categoryUpdate)
-                        graphClient.contacts().byContactId(luid).patch(contact);
-                    System.out.println("\033[0;36mCONTACT:\n\tID: " + luid + "\n\tNAME: " + contact.getDisplayName() + "\nhas status UNCHANGED -> nothing to Outlook\033[0m");
+                        updatedContact = patchContact(graphClient, contact, luid);
+                    System.out.println("\033[0;36mCONTACT:\n\tID: " + updatedContact.getId() + "\n\tNAME: " + updatedContact.getDisplayName() + "\nhas status UNCHANGED -> nothing to Outlook\033[0m");
                 }
                 default -> throw new Exception("CONTACT_STATUS has unexpected value: " + status);
             }
@@ -74,13 +82,35 @@ public class OutlookContactUpdater {
     }
 
 
+    public static String extractUserId(String device) {
+        if (device == null || device.isEmpty())
+            return null;
+
+        int slashIndex = device.indexOf('/');
+        if (slashIndex == -1)
+            return device;
+        else
+            return device.substring(0, slashIndex);
+    }
+
+
     // creates provided contact in the specified folderId
     // if folderId is null or empty, contact will be created in the default Outlook contact folder
-    private static Contact createContactInFolder(UserItemRequestBuilder graphClient, Contact contact, String folderId) {
+    private static Contact postContact(UserItemRequestBuilder graphClient, Contact contact, String folderId) {
         if (folderId == null || folderId.isEmpty())// happens if device has no folder specified, eg device: mensing@kieback-peter.de/
             return graphClient.contacts().post(contact);
         else
             return graphClient.contactFolders().byContactFolderId(folderId).contacts().post(contact);
+    }
+
+
+    private static void deleteContact(UserItemRequestBuilder graphClient, String luid) {
+        graphClient.contacts().byContactId(luid).delete();
+    }
+
+
+    private static Contact patchContact(UserItemRequestBuilder graphClient, Contact contact, String luid) {
+        return graphClient.contacts().byContactId(luid).patch(contact);
     }
 
 
@@ -134,7 +164,7 @@ public class OutlookContactUpdater {
 
     private static String findFolderId(UserItemRequestBuilder graphClient, String parentFolderId, String folderName) throws Exception {
         // if parentFolderId is null or invalid/does not exist, function will throw error, caught by updateContact catch-block
-        // TODO maybe catch this error message and put it in the syncupdate
+        // TODO catch this error message and put it in the syncupdate
         ContactFolderCollectionResponse folderCollection;
 
         if (parentFolderId == null || parentFolderId.isEmpty())

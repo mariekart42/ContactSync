@@ -3,7 +3,6 @@ package org.example.ContactData;
 import com.microsoft.graph.models.Contact;
 import com.microsoft.graph.models.EmailAddress;
 import com.microsoft.graph.models.PhysicalAddress;
-
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -43,13 +42,13 @@ public class ParseContact
 
             if (val1.equalsIgnoreCase(val2))
                 continue;
-
             addDataToContact(contact, key, val1);
         }
         setAddresses(contact);
         setFileAsAttribute(contact, deviceSpecifics);
         return contact;
     }
+
 
     private void setFileAsAttribute(Contact contact, String devicespecifics) throws Exception {
 
@@ -73,9 +72,9 @@ public class ParseContact
             case null, default ->
             // TODO should the error if devicespecifics not found be in the syncresult? or just ignore?
                 throw new Exception("devicespecifics was defined wron in adito: " + devicespecifics);
-
         }
     }
+
 
     private void setAddresses(Contact contact)
     {
@@ -177,6 +176,7 @@ public class ParseContact
                 map.put(key, "");
         }
     }
+
 
     private Map<String, String> parseToMap(String data)
     {
