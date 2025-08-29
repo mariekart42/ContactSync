@@ -88,8 +88,9 @@ values (10, 'Thomas Sierpinski', 'Thomas Sierpinski');
 insert into syncdevice (SYNCDEVICEID, DEVICE, DESCRIPTION, TZID, DEVICESPECIFICS, AVOIDFIELDS)
 values (1, 'roemer@kieback-peter.de/AditoKontakteee1', 'Exchange', 'Europe/Berlin', 'fileAsMapping=LastCommaFirst', null);
 
+-- using this rn:
 insert into syncdevice (SYNCDEVICEID, DEVICE, DESCRIPTION, TZID, DEVICESPECIFICS, AVOIDFIELDS)
-values (2, 'kolb-kl@kieback-peter.de/', 'Exchange', 'Europe/Berlin', 'fileAsMapping=LastCommaFirst', '*web*');
+values (2, 'kolb-kl@kieback-peter.de/A/B/HERE', 'Exchange', 'Europe/Berlin', 'fileAsMapping=LastCommaFirst', '*web*');
 
 insert into syncdevice (SYNCDEVICEID, DEVICE, DESCRIPTION, TZID, DEVICESPECIFICS, AVOIDFIELDS)
 values (3, 'boehm@kieback-peter.de/AditoKontakteee2/lol1/lol2', 'Exchange', 'Europe/Berlin', 'fileAsMapping=LastCommaFirst', '*');
@@ -168,12 +169,12 @@ values (10, 10, 10, 'ok');
 
 -- 1. changed
 insert into syncabonnement (SYNCABONNEMENTID, PRINCIPAL, DBNAME, GUID, LUID, ABOSTART, ABOENDE, CHANGED, SYNCED, TO_EXTERNAL, FROM_EXTERNAL, SYNCRESULT)
-values (2, 2,  'person', '5500', 'AAMkADg4NWM4MjMxLTc0ZjQtNGU4ZC05ZDc2LTgwMDJkNjAyNWE0YwBGAAAAAABb4L58lBuvQaM7Snxz45CZBwDKuT-HM9gZQIxqxJFFZgGEAAAAAAEOAADKuT-HM9gZQIxqxJFFZgGEAACPGe0_AAA=', to_date('13-12-2010 12:00:05', 'dd-mm-yyyy hh24:mi:ss'), null, to_date('10-08-2023 17:15:29', 'dd-mm-yyyy hh24:mi:ss'), to_date('09-08-2023 17:15:29', 'dd-mm-yyyy hh24:mi:ss'), 'keymapversion=6
+values (2, 2,  'person', '5500' , 'AAMkADg4NWM4MjMxLTc0ZjQtNGU4ZC05ZDc2LTgwMDJkNjAyNWE0YwBGAAAAAABb4L58lBuvQaM7Snxz45CZBwDKuT-HM9gZQIxqxJFFZgGEAACQSYIuAADKuT-HM9gZQIxqxJFFZgGEAACQSlwTAAA=', to_date('13-12-2010 12:00:05', 'dd-mm-yyyy hh24:mi:ss'), null, to_date('10-08-2023 17:15:29', 'dd-mm-yyyy hh24:mi:ss'), to_date('09-08-2023 17:15:29', 'dd-mm-yyyy hh24:mi:ss'), 'keymapversion=6
 anrede=
 funktion=Inhaber/in
-name=Lüthen
+name=OLD
 geb=20150924
-vorname=Wilfried
+vorname=same
 geb=20150924
 p_strasse=
 p_plz=

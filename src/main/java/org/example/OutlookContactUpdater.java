@@ -5,7 +5,10 @@ import com.microsoft.graph.models.ContactFolder;
 import com.microsoft.graph.models.ContactFolderCollectionResponse;
 import com.microsoft.graph.users.item.UserItemRequestBuilder;
 import com.microsoft.graph.users.item.contacts.ContactsRequestBuilder;
+import com.microsoft.graph.users.item.contacts.item.ContactItemRequestBuilder;
 import org.example.AditoRequests.CONTACT_STATUS;
+import org.example.ContactData.ParseContact;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -17,16 +20,15 @@ public class OutlookContactUpdater {
     //  - catch syncresult, store it in `SYNCABONNEMENT.syncresult`
     //  - update `SYNCABONNEMENT.synced`, `SYNCABONNEMENT.changed`, `SYNCABONNEMENT.abostart` and `SYNCABONNEMENT.aboende`
     //  - create folder and put contact inside with information of 'device' -> later: move contact to new folder if it changed
-    public static void updateContact(Contact contact, Map<String, String> contactMetaData, CONTACT_STATUS status)
+    public static void updateContact(Map<String, String> contactMetaData, CONTACT_STATUS status)
     {
         String luid = contactMetaData.get("luid");
         String device = contactMetaData.get("device");
+        String deviceSpecifics = contactMetaData.get("devicespecifics");
         String userId = extractUserId(device); // user later with real data
         // rn always use mine so we're not messing up other peoples contacts lol
         userId = App.USER;
 
-        if (contact == null)
-            return;
 
         AppConfig config = new AppConfig();
         try
@@ -35,9 +37,25 @@ public class OutlookContactUpdater {
                     .users()
                     .byUserId(userId);
 
-            boolean categoryUpdate = addAditoCategoryToContact(graphClient.contacts(), contact, luid, status);
-
             String deepestId = ensureFolderExists(graphClient, null, extractFolderTree(device));
+
+
+            Contact contact;
+            ParseContact parse = new ParseContact();
+            if (status == CONTACT_STATUS.TO_CHANGE && !isContactInFolder(graphClient, deepestId, luid))
+            {
+                contact = parse.getContact(AditoRequests.getResultFromMockSQLFunction(contactMetaData), contactMetaData, false);
+            }
+            else
+            {
+                contact = parse.getContact(AditoRequests.getResultFromMockSQLFunction(contactMetaData), contactMetaData, true);
+            }
+
+
+            if (contact == null)
+                return;
+
+            boolean categoryUpdate = addAditoCategoryToContact(graphClient.contacts(), contact, luid, status);
 
             Contact updatedContact = null; // TODO delete later, just for info/debug
             switch (status)
@@ -47,16 +65,27 @@ public class OutlookContactUpdater {
                     //  if contacts device folder tree changed and we want to move him
                     //  new folder got created already
                     //  now we have to check if contact with id is already in that folder
-                    //  if yes -> great, do nothing
+// if deepest id equal to contacts parentfolder id, if deepest id is null or empty, contact is in the default outlook folder
+                    if (!isContactInFolder(graphClient, deepestId, luid)) // more performant would be to somehow actually know if device changed, but dunno how
+                    {
                     //  if no  -> grr
                     //            get all data from outlook contact
                     //            update all new data from contact on top (that way all old data is also there)
                     //            create this contact in the devive folder
                     //       BUT  this would mean he gets a new luid -> needs to get updated in adito
                     //  do when real adito data is available
-
-                    updatedContact = patchContact(graphClient, contact, luid);
-                    System.out.println("\033[0;33mCONTACT:\n\tID: " + updatedContact.getId() + "\n\tNAME: " + updatedContact.getDisplayName() + "\nhas status TO_CHANGE -> PATCH to Outlook\033[0m");
+//                        ParseContact parse = new ParseContact();
+                        //contact = parse.mergeContacts(graphClient.contacts().byContactId(luid).get(), contact, deviceSpecifics);
+                        updatedContact = postContact(graphClient, contact, deepestId);
+                        deleteContact(graphClient, luid);
+                        System.out.println("\033[0;32mMOVED CONTACT:\nCONTACT:\n\tID: " + updatedContact.getId() + "\n\tNAME: " + updatedContact.getDisplayName() + "\nhas status TO_CREATE -> POST to Outlook\033[0m");
+                        // TODO test this and later put new luid into adito db
+                    }
+                    else
+                    { //  if yes -> great, do nothing
+                        updatedContact = patchContact(graphClient, contact, luid);
+                        System.out.println("\033[0;33mCONTACT:\n\tID: " + updatedContact.getId() + "\n\tNAME: " + updatedContact.getDisplayName() + "\nhas status TO_CHANGE -> PATCH to Outlook\033[0m");
+                    }
                 }
                 case TO_CREATE -> {
                     updatedContact = postContact(graphClient, contact, deepestId);
@@ -80,6 +109,45 @@ public class OutlookContactUpdater {
             e.printStackTrace();
         }
     }
+
+
+    // Checks whether the specified contactId exists in the given contactFolderId
+    // If contactFolderId is null or empty, the check is performed in the default Outlook contact folder
+    private static boolean isContactInFolder(UserItemRequestBuilder graphClient, String contactFolderId, String contactId) throws Exception {
+
+        if (contactFolderId == null || contactFolderId.isEmpty())
+        { // contact is perhaps inside the default outlook folder
+            var contactsInDefaultFolder = graphClient.contacts().get();
+            if (contactsInDefaultFolder == null)
+                throw new Exception("Unable to retrieve Contact Data from MSGraph.");
+
+            if (contactsInDefaultFolder.getValue() == null || contactsInDefaultFolder.getValue().isEmpty()) // means there are no contacts in the default folder -> contact is obviously not there
+                return false;
+
+            for (var contact : contactsInDefaultFolder.getValue())
+            {
+                if (contact.getId() != null && contact.getId().equalsIgnoreCase(contactId))
+                    return true;
+            }
+            return false;
+        }
+
+        Contact contactData = graphClient.contacts().byContactId(contactId).get();
+        if (contactData == null)
+            throw new Exception("Unable to retrieve Contact Data from MSGraph.");
+        else if (contactData.getParentFolderId() == null || contactData.getParentFolderId().isEmpty())
+            return false;
+        return contactData.getParentFolderId().equalsIgnoreCase(contactFolderId);
+    }
+
+
+
+
+
+
+
+
+
 
 
     public static String extractUserId(String device) {
@@ -132,11 +200,13 @@ public class OutlookContactUpdater {
     // Creates missing folders if they do not exist
     // Handles cases where all, some, or none of the folders already exist
     private static String ensureFolderExists(UserItemRequestBuilder graphClient, String parentFolderId, String device) throws Exception {
-        if (device == null || device.isEmpty() || device.equalsIgnoreCase("/"))
+
+        device = trimChar(device, '/');
+
+        if (device == null || device.isEmpty())
             return parentFolderId;
 
         String folderName;
-        device = trimChar(device, '/');
         int nextSlash = device.indexOf('/');
         if (nextSlash == -1)
         {
@@ -172,11 +242,11 @@ public class OutlookContactUpdater {
         else
             folderCollection = graphClient.contactFolders().byContactFolderId(parentFolderId).childFolders().get();
 
-        if (folderCollection == null)
+        if (folderCollection == null || folderCollection.getValue() == null)
             throw new Exception("Unable to retrieve contactFolders from MSGraph.");
-        for (var folder : Objects.requireNonNull(folderCollection.getValue())) // no null/empty check needed, see comment above
+        for (var folder : folderCollection.getValue()) // no null/empty check needed, see comment above
         {
-            if (Objects.requireNonNull(folder.getDisplayName()).equalsIgnoreCase(folderName))
+            if (folder.getDisplayName() != null && folder.getDisplayName().equalsIgnoreCase(folderName))
                 return folder.getId();
         }
         return null;
@@ -227,6 +297,9 @@ public class OutlookContactUpdater {
 
     private static String trimChar(String str, Character toRemove)
     {
+        if (str == null || str.isEmpty())
+            return null;
+
         while (!str.isEmpty() && str.charAt(0) == toRemove) {
             str = str.substring(1);
         }

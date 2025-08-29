@@ -8,9 +8,9 @@ BEGIN
         'keymapversion=6
         anrede=DEF(anrede)
         funktion=DEF(funktion)
-        name=DEF(nachname)
+        name=overridden
         geb=DEF(geb)
-        vorname=DEF(vorname)
+        vorname=same
         geb=DEF(geb)
         p_strasse=DEF(p_strasse)
         p_plz=DEF(p_plz)

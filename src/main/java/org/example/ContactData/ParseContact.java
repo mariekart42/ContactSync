@@ -21,7 +21,12 @@ public class ParseContact
     // it considers to_external and only adds attributes that have changed values
     // fields defined in avoidFields are considered
     // return: Contact object with only attributes oth changed data
-    public Contact getContact(String aditoData, Map<String, String> contactMetaData) throws Exception {
+
+    // forget about stuff above, hello to ignoreIdenticalEntries
+    // stuff above is valid for ignoreIdenticalEntries = false
+    // ignoreIdenticalEntries = true will also init duplicates in the contact object. This is important if we want to move
+    // a contact from one folder to another. In that case we need the whole data to create a whole new contact (we delete old one)
+    public Contact getContact(String aditoData, Map<String, String> contactMetaData, boolean ignoreIdenticalEntries) throws Exception {
         String toExternal = contactMetaData.get("to_external");
         String avoidFields = contactMetaData.get("avoid");
         String deviceSpecifics = contactMetaData.get("devicespecifics");
@@ -30,7 +35,7 @@ public class ParseContact
         Map<String, String> toExternalMap = parseToMap(toExternal);
         clearFields(toExternalMap, avoidFields);
 
-        if (aditoData.equalsIgnoreCase(toExternal) || aditoMap.equals(toExternalMap))
+        if ((aditoData.equalsIgnoreCase(toExternal) || aditoMap.equals(toExternalMap)) && ignoreIdenticalEntries)
             return null; // nothing to update cause maps are identical
 
         Contact contact = new Contact();
@@ -40,7 +45,7 @@ public class ParseContact
             String val1 = aditoMap.get(key);
             String val2 = toExternalMap.get(key);
 
-            if (val1.equalsIgnoreCase(val2))
+            if (val1.equalsIgnoreCase(val2) && ignoreIdenticalEntries)
                 continue;
             addDataToContact(contact, key, val1);
         }
@@ -102,6 +107,9 @@ public class ParseContact
     // function adds the specific values from adito to the Contact object
     protected void addDataToContact(Contact contact, String key, String value)
     {
+        if (value == null || value.isBlank())
+            return;
+
         switch (key)
         {
 //            case "anrede":
@@ -196,4 +204,66 @@ public class ParseContact
         }
         return map;
     }
+
+
+    public Contact mergeContacts(Contact currentContact, Contact newContact, String deviceSpecifics) throws Exception {
+        if (newContact == null)
+            throw new Exception("Unable to retrieve Contact Data from MSGraph.");
+
+        addDataToContact(currentContact, "funktion", newContact.getJobTitle());
+//        addDataToContact(oldContact, "anrede", newContact.get);
+        addDataToContact(currentContact, "funktion", newContact.getJobTitle());
+        addDataToContact(currentContact, "name", newContact.getSurname());
+        if (newContact.getBirthday() != null)
+            addDataToContact(currentContact, "geb", newContact.getBirthday().toString());
+        addDataToContact(currentContact, "vorname", newContact.getGivenName());
+
+        if (newContact.getHomeAddress() != null)
+        {
+            addDataToContact(currentContact, "p_strasse", newContact.getHomeAddress().getStreet());
+            addDataToContact(currentContact, "p_plz", newContact.getHomeAddress().getPostalCode());
+            addDataToContact(currentContact, "p_ort", newContact.getHomeAddress().getCity());
+            addDataToContact(currentContact, "p_lkz", newContact.getHomeAddress().getState());
+        }
+
+        if (newContact.getBusinessPhones() != null)
+        {
+            if (!newContact.getBusinessPhones().isEmpty() && newContact.getBusinessPhones().getFirst() != null)
+                addDataToContact(currentContact, "bphone1", newContact.getBusinessPhones().getFirst());
+            if (newContact.getBusinessPhones().size() >= 2 && newContact.getBusinessPhones().get(1) != null)
+                addDataToContact(currentContact, "bphone2", newContact.getBusinessPhones().get(1));
+        }
+
+        addDataToContact(currentContact, "mobile", newContact.getMobilePhone());
+//        addDataToContact(oldContact, "carphone", override.get);
+//        addDataToContact(oldContact, "otherfax", override.get);
+//        addDataToContact(oldContact, "bfax", override.get);
+//        addDataToContact(oldContact, "companyphone", override.get);
+        addDataToContact(currentContact, "web", newContact.getBusinessHomePage());
+        addDataToContact(currentContact, "firma", newContact.getCompanyName());
+
+        if (newContact.getBusinessAddress() != null)
+        {
+            addDataToContact(currentContact, "strasse", newContact.getBusinessAddress().getStreet());
+            addDataToContact(currentContact, "ort", newContact.getBusinessAddress().getCity());
+            addDataToContact(currentContact, "plz", newContact.getBusinessAddress().getPostalCode());
+        }
+
+        if (newContact.getEmailAddresses() != null)
+        {
+            if (!newContact.getEmailAddresses().isEmpty() && newContact.getEmailAddresses().getFirst() != null)
+                addDataToContact(currentContact, "email1", String.valueOf(newContact.getEmailAddresses().getFirst()));
+            if (newContact.getEmailAddresses().size() >= 2 && newContact.getEmailAddresses().get(1) != null)
+                addDataToContact(currentContact, "email2", String.valueOf(newContact.getEmailAddresses().get(1)));
+            if (newContact.getEmailAddresses().size() >= 3 && newContact.getEmailAddresses().get(2) != null)
+                addDataToContact(currentContact, "email3", String.valueOf(newContact.getEmailAddresses().get(2)));
+        }
+        addDataToContact(currentContact, "info", newContact.getPersonalNotes());
+        setAddresses(currentContact);
+        setFileAsAttribute(currentContact, deviceSpecifics);
+        return currentContact;
+    }
+
+
+
 }

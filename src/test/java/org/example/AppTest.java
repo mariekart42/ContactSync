@@ -21,7 +21,7 @@ class AppTest {
         contactMetaData.put("to_external", toExternal);
         ParseContact parse = new ParseContact();
 
-        Contact contact = parse.getContact(newestAditoData,contactMetaData);
+        Contact contact = parse.getContact(newestAditoData,contactMetaData, true);
         assertNull(contact);
     }
 
@@ -34,8 +34,9 @@ class AppTest {
         Map<String, String> contactMetaData = new HashMap<>();
         contactMetaData.put("avoid", toAvoid);
         contactMetaData.put("to_external", toExternal);
+        contactMetaData.put("devicespecifics", "fileAsMapping=LastCommaFirst");
         ParseContact parse = new ParseContact();
-        Contact contact = parse.getContact(newestAditoData, contactMetaData);
+        Contact contact = parse.getContact(newestAditoData, contactMetaData, true);
         assertNotEquals(null, contact);
     }
 
@@ -102,8 +103,9 @@ class AppTest {
         Map<String, String> contactMetaData = new HashMap<>();
         contactMetaData.put("avoid", toAvoid);
         contactMetaData.put("to_external", toExternal);
+        contactMetaData.put("devicespecifics", "fileAsMapping=LastCommaFirst");
         ParseContact parse = new ParseContact();
-        Contact contact = parse.getContact(newestAditoData, contactMetaData);
+        Contact contact = parse.getContact(newestAditoData, contactMetaData, true);
         assertNull(contact);
     }
 
@@ -117,7 +119,8 @@ class AppTest {
         Map<String, String> contactMetaData = new HashMap<>();
         contactMetaData.put("avoid", toAvoid);
         contactMetaData.put("to_external", toExternal);
-        Contact contact = parse.getContact(newestAditoData, contactMetaData);
+        contactMetaData.put("devicespecifics", "fileAsMapping=LastCommaFirst");
+        Contact contact = parse.getContact(newestAditoData, contactMetaData, true);
         assertNull(contact);
     }
 }

@@ -35,10 +35,10 @@ public class App {
 
                 contactMetaData.put("guid", "5500"); // TODO delete this
 
-                Contact contact = parse.getContact(AditoRequests.getResultFromMockSQLFunction(contactMetaData), contactMetaData);
-                OutlookContactUpdater.updateContact(contact, contactMetaData, status);
+//                Contact contact = parse.getContact(AditoRequests.getResultFromMockSQLFunction(contactMetaData), contactMetaData);
+                OutlookContactUpdater.updateContact(contactMetaData, status);
 
-                lol(textArea, frame, contact, status, contactMetaData);// TODO delete this
+//                lol(textArea, frame, contact, status, contactMetaData);// TODO delete this
                 break;// TODO and this
             }
 
