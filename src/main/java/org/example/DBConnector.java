@@ -64,6 +64,18 @@ public class DBConnector implements AutoCloseable
     }
 
 
+    public static ResultSet getContactData() throws SQLException
+    {
+        String query = "select a.guid,a.luid,a.abostart,a.aboende,a.changed,a.synced,a.to_external,d.device,d.devicespecifics,d.avoidfields from syncabonnement a join syncprincipal p ON a.principal=p.syncprincipalid JOIN syncdevice d ON p.syncdevice_id=d.syncdeviceid";
+        Connection connection = getInstance().getConnection();
+        Statement stmt = connection.createStatement();
+        return stmt.executeQuery(query);
+    }
+
+
+
+
+
     // TODO: this will not work yet, later when we work with the real Adito DB we can actually
     //       call the function 'getContactMap()' but rn with postgres db, this function is not defined
     //       The function gives us the newest data of a user, this we can compare to the data saved in to_external

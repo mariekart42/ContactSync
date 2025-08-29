@@ -5,13 +5,10 @@ import com.microsoft.graph.models.ContactFolder;
 import com.microsoft.graph.models.ContactFolderCollectionResponse;
 import com.microsoft.graph.users.item.UserItemRequestBuilder;
 import com.microsoft.graph.users.item.contacts.ContactsRequestBuilder;
-import com.microsoft.graph.users.item.contacts.item.ContactItemRequestBuilder;
 import org.example.AditoRequests.CONTACT_STATUS;
 import org.example.ContactData.ParseContact;
-
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 
 public class OutlookContactUpdater {
@@ -19,12 +16,10 @@ public class OutlookContactUpdater {
     // TODO:
     //  - catch syncresult, store it in `SYNCABONNEMENT.syncresult`
     //  - update `SYNCABONNEMENT.synced`, `SYNCABONNEMENT.changed`, `SYNCABONNEMENT.abostart` and `SYNCABONNEMENT.aboende`
-    //  - create folder and put contact inside with information of 'device' -> later: move contact to new folder if it changed
     public static void updateContact(Map<String, String> contactMetaData, CONTACT_STATUS status)
     {
         String luid = contactMetaData.get("luid");
         String device = contactMetaData.get("device");
-        String deviceSpecifics = contactMetaData.get("devicespecifics");
         String userId = extractUserId(device); // user later with real data
         // rn always use mine so we're not messing up other peoples contacts lol
         userId = App.USER;
@@ -37,63 +32,48 @@ public class OutlookContactUpdater {
                     .users()
                     .byUserId(userId);
 
-            String deepestId = ensureFolderExists(graphClient, null, extractFolderTree(device));
-
+            String contactFolderId = ensureFolderExists(graphClient, null, extractFolderTree(device));
 
             Contact contact;
             ParseContact parse = new ParseContact();
-            if (status == CONTACT_STATUS.TO_CHANGE && !isContactInFolder(graphClient, deepestId, luid))
-            {
-                contact = parse.getContact(AditoRequests.getResultFromMockSQLFunction(contactMetaData), contactMetaData, false);
-            }
-            else
-            {
-                contact = parse.getContact(AditoRequests.getResultFromMockSQLFunction(contactMetaData), contactMetaData, true);
-            }
 
+            boolean contactFolderChanged = hasContactFolderChanged(graphClient, status, contactFolderId, luid);
+            if (contactFolderChanged)
+                contact = parse.getContact(AditoRequests.getResultFromMockSQLFunction(contactMetaData), contactMetaData, false);
+            else
+                contact = parse.getContact(AditoRequests.getResultFromMockSQLFunction(contactMetaData), contactMetaData, true);
 
             if (contact == null)
                 return;
 
             boolean categoryUpdate = addAditoCategoryToContact(graphClient.contacts(), contact, luid, status);
 
-            Contact updatedContact = null; // TODO delete later, just for info/debug
+            Contact updatedContact = null;
             switch (status)
             {
                 case TO_CHANGE -> {
-                    // TODO move contact to new folder if device changed
-                    //  if contacts device folder tree changed and we want to move him
-                    //  new folder got created already
-                    //  now we have to check if contact with id is already in that folder
-// if deepest id equal to contacts parentfolder id, if deepest id is null or empty, contact is in the default outlook folder
-                    if (!isContactInFolder(graphClient, deepestId, luid)) // more performant would be to somehow actually know if device changed, but dunno how
+                    if (contactFolderChanged)
                     {
-                    //  if no  -> grr
-                    //            get all data from outlook contact
-                    //            update all new data from contact on top (that way all old data is also there)
-                    //            create this contact in the devive folder
-                    //       BUT  this would mean he gets a new luid -> needs to get updated in adito
-                    //  do when real adito data is available
-//                        ParseContact parse = new ParseContact();
-                        //contact = parse.mergeContacts(graphClient.contacts().byContactId(luid).get(), contact, deviceSpecifics);
-                        updatedContact = postContact(graphClient, contact, deepestId);
+                        updatedContact = postContact(graphClient, contact, contactFolderId);
                         deleteContact(graphClient, luid);
                         System.out.println("\033[0;32mMOVED CONTACT:\nCONTACT:\n\tID: " + updatedContact.getId() + "\n\tNAME: " + updatedContact.getDisplayName() + "\nhas status TO_CREATE -> POST to Outlook\033[0m");
-                        // TODO test this and later put new luid into adito db
+                        // TODO put new luid into adito db (updatedContact.getId())
                     }
                     else
-                    { //  if yes -> great, do nothing
+                    {
                         updatedContact = patchContact(graphClient, contact, luid);
                         System.out.println("\033[0;33mCONTACT:\n\tID: " + updatedContact.getId() + "\n\tNAME: " + updatedContact.getDisplayName() + "\nhas status TO_CHANGE -> PATCH to Outlook\033[0m");
                     }
                 }
                 case TO_CREATE -> {
-                    updatedContact = postContact(graphClient, contact, deepestId);
+                    updatedContact = postContact(graphClient, contact, contactFolderId);
                     System.out.println("\033[0;32mCONTACT:\n\tID: " + updatedContact.getId() + "\n\tNAME: " + updatedContact.getDisplayName() + "\nhas status TO_CREATE -> POST to Outlook\033[0m");
+                    // TODO put new luid into adito db (updatedContact.getId())
                 }
                 case TO_DELETE -> {
                     deleteContact(graphClient, luid);
                     System.out.println("\033[0;31mCONTACT:\n\tID: " + luid + "\n\tNAME: " + contact.getDisplayName() + "\nhas status TO_DELETE -> DELETE to Outlook\033[0m");
+                    // TODO remove luid from adito db
                 }
                 case UNCHANGED -> {
                     if (categoryUpdate)
@@ -108,6 +88,12 @@ public class OutlookContactUpdater {
             System.out.println("An error occurred while updating a contact in Outlook: " + e);
             e.printStackTrace();
         }
+    }
+
+    private static boolean hasContactFolderChanged(UserItemRequestBuilder graphClient, CONTACT_STATUS status, String folderId, String luid) throws Exception {
+        if (status != CONTACT_STATUS.TO_CHANGE) // keep if statements separated to reduce calls to isContactInFolder() (overhead)
+            return false;
+        return !isContactInFolder(graphClient, folderId, luid);
     }
 
 
@@ -139,15 +125,6 @@ public class OutlookContactUpdater {
             return false;
         return contactData.getParentFolderId().equalsIgnoreCase(contactFolderId);
     }
-
-
-
-
-
-
-
-
-
 
 
     public static String extractUserId(String device) {
@@ -210,13 +187,8 @@ public class OutlookContactUpdater {
         int nextSlash = device.indexOf('/');
         if (nextSlash == -1)
         {
-            if (!device.isEmpty())
-            {
-                folderName = device;
-                device = "";
-            }
-            else
-                return parentFolderId;
+            folderName = device;
+            device = "";
         }
         else
         {
