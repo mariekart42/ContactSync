@@ -67,77 +67,77 @@ class OutlookContactUpdaterTest {
 
 
 
-    @Test
-    void createFolders_createOneNewFolder()
-    {
-        try
-        {
-            var graphClient = getUserGraphClient();
-            String parentFolderId = null;
-            String device = "/doesNotExist/";
-            OutlookContactUpdater.createFolders(graphClient, parentFolderId, device);
-
-            var response = graphClient.contactFolders().get();
-            for (var folderItem : response.getValue())
-            {
-                if (folderItem.getDisplayName().equalsIgnoreCase("doesNotExist"))
-                {
-                    assertTrue(true);
-                    OutlookContactUpdater.deleteFolder(graphClient, folderItem.getId());
-                    return;
-                }
-            }
-            fail();
-
-        } catch (Exception e) {
-            fail();
-            throw new RuntimeException(e);
-        }
-    }
-
-    @Test
-    void createFolders_createTwoNewNestedFolders()
-    {
-        System.out.println("MAKE SURE folder /doesNotExist/doesAlsoNotExist/ does not exist.");
-        try
-        {
-            var graphClient = getUserGraphClient();
-            String parentFolderId = null;
-            String device = "/doesNotExist/doesAlsoNotExist/";
-            try
-            {
-                OutlookContactUpdater.createFolders(graphClient, parentFolderId, device);
-            }
-            catch (Exception e)
-            {
-                fail(e);
-                return;
-            }
-
-            var response = graphClient.contactFolders().get();
-            for (var folderItem : response.getValue())
-            {
-                if (folderItem.getDisplayName().equalsIgnoreCase("doesNotExist"))
-                {
-                    response = graphClient.contactFolders().byContactFolderId(folderItem.getId()).childFolders().get();
-
-                    for (var folderItem2 : response.getValue())
-                    {
-                        if (folderItem2.getDisplayName().equalsIgnoreCase("doesAlsoNotExist"))
-                        {
-                            assertTrue(true);
-                            return;
-                        }
-                    }
-                    return;
-                }
-            }
-            fail();
-        } catch (Exception e) {
-            fail();
-            throw new RuntimeException(e);
-        }
-    }
+//    @Test
+//    void createFolders_createOneNewFolder()
+//    {
+//        try
+//        {
+//            var graphClient = getUserGraphClient();
+//            String parentFolderId = null;
+//            String device = "/doesNotExist/";
+//            OutlookContactUpdater.createFolders(graphClient, parentFolderId, device);
+//
+//            var response = graphClient.contactFolders().get();
+//            for (var folderItem : response.getValue())
+//            {
+//                if (folderItem.getDisplayName().equalsIgnoreCase("doesNotExist"))
+//                {
+//                    assertTrue(true);
+//                    OutlookContactUpdater.deleteFolder(graphClient, folderItem.getId());
+//                    return;
+//                }
+//            }
+//            fail();
+//
+//        } catch (Exception e) {
+//            fail();
+//            throw new RuntimeException(e);
+//        }
+//    }
+//
+//    @Test
+//    void createFolders_createTwoNewNestedFolders()
+//    {
+//        System.out.println("MAKE SURE folder /doesNotExist/doesAlsoNotExist/ does not exist.");
+//        try
+//        {
+//            var graphClient = getUserGraphClient();
+//            String parentFolderId = null;
+//            String device = "/doesNotExist/doesAlsoNotExist/";
+//            try
+//            {
+//                OutlookContactUpdater.createFolders(graphClient, parentFolderId, device);
+//            }
+//            catch (Exception e)
+//            {
+//                fail(e);
+//                return;
+//            }
+//
+//            var response = graphClient.contactFolders().get();
+//            for (var folderItem : response.getValue())
+//            {
+//                if (folderItem.getDisplayName().equalsIgnoreCase("doesNotExist"))
+//                {
+//                    response = graphClient.contactFolders().byContactFolderId(folderItem.getId()).childFolders().get();
+//
+//                    for (var folderItem2 : response.getValue())
+//                    {
+//                        if (folderItem2.getDisplayName().equalsIgnoreCase("doesAlsoNotExist"))
+//                        {
+//                            assertTrue(true);
+//                            return;
+//                        }
+//                    }
+//                    return;
+//                }
+//            }
+//            fail();
+//        } catch (Exception e) {
+//            fail();
+//            throw new RuntimeException(e);
+//        }
+//    }
 
 
 

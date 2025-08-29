@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Contacts</title>
+</head>
+<body>
+<h1>Contacts</h1>
+<table border="1">
+    <thead>
+    <tr>
+        <th>Name</th>
+        <th>Job Title</th>
+    </tr>
+    </thead>
+    <tbody id="contactTable"></tbody>
+</table>
+
+<h1>Contact Sync</h1>
+<button id="triggerBtn">Run Backend Logic</button>
+<p id="result"></p>
+
+<script>
+    fetch('/contacts')
+        .then(response => response.json())
+        .then(data => {
+            const tbody = document.getElementById('contactTable');
+            data.forEach(contact => {
+                const row = document.createElement('tr');
+                const nameCell = document.createElement('td');
+                const jobCell = document.createElement('td');
+
+                nameCell.textContent = contact;
+
+                row.appendChild(nameCell);
+                row.appendChild(jobCell);
+                tbody.appendChild(row);
+            });
+        })
+        .catch(err => console.error('Error fetching contacts:', err));
+
+
+
+        document.getElementById("triggerBtn").addEventListener("click", () => {
+        fetch("/trigger")
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById("result").innerText = data;
+            })
+            .catch(err => console.error("Error:", err));
+    });
+</script>
+</body>
+</html>
