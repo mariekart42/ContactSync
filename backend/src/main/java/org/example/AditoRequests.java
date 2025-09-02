@@ -58,6 +58,6 @@ public class AditoRequests {
     // `get_latest_contact_properties(username varchar2) return varchar2`
     // avoid fields functionality is included afterward as a Java function
     public static String getResultFromMockSQLFunction(Map<String, String> contactMetaData) throws SQLException {
-        return DBConnector.executeMockGetContactMapSQLFunction(contactMetaData.get("guid"), contactMetaData.get("avoid"));
+        return DBConnector.executeMockGetContactMapSQLFunction(contactMetaData.get("guid"), contactMetaData.get("avoidfields"));
     }
 }

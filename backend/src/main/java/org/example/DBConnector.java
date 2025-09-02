@@ -76,7 +76,7 @@ public class DBConnector implements AutoCloseable
     public static ResultSet getPrincipals() throws SQLException
     {
         System.out.println("check");
-        String query = "SELECT * FROM syncprincipal pri order by pri.syncprincipalid";
+        String query = "SELECT pri.syncprincipalid, pri.syncuser_id, pri.syncdevice_id, pri.syncresult AS principal_syncresult FROM syncprincipal pri order by pri.syncprincipalid";
         Connection connection = getInstance().getConnection();
         Statement stmt = connection.createStatement();
         return stmt.executeQuery(query);
@@ -85,16 +85,37 @@ public class DBConnector implements AutoCloseable
 
     public static ResultSet getContactDataFromPrincipalId(String principalId) throws SQLException
     {
+        System.out.println("inside getContactDataFromPrincipalId() db function");
         if (principalId == null || principalId.isBlank() || !isPositiveInteger(principalId))
             return null;
         System.out.println("received princ id: " + principalId);
-        String query = "select * from syncprincipal pri join syncabonnement abo on abo.principal = pri.syncprincipalid join syncdevice dev on dev.syncdeviceid = pri.syncdevice_id\n" +
-                "where pri.syncprincipalid = '"+principalId+"'";
+        String query = "select dev.syncdeviceid, dev.device, dev.devicespecifics, dev.avoidfields, \n" +
+                "\tpri.syncprincipalid, pri.syncdevice_id, pri.syncresult AS principal_syncresult, \n" +
+                "    abo.syncabonnementid, abo.principal, abo.guid, abo.luid, abo.abostart, abo.aboende, abo.synced, abo.changed, abo.to_external, abo.syncresult AS abo_syncresult from syncprincipal pri join syncabonnement abo on abo.principal = pri.syncprincipalid join syncdevice dev on dev.syncdeviceid = pri.syncdevice_id where pri.syncprincipalid = '"+principalId+"'";
         Connection connection = getInstance().getConnection();
         Statement stmt = connection.createStatement();
         return stmt.executeQuery(query);
     }
 
+
+    // delete this function later and create a function for every action
+    // returns true if success
+    public static boolean updateDb(String query)
+    {
+        try
+        {
+            Connection connection = getInstance().getConnection();
+            Statement stmt = connection.createStatement();
+            stmt.executeQuery(query);
+            return true;
+        }
+        catch (Exception e)
+        {
+            System.out.println("inside updateDb()");
+            e.printStackTrace();
+            return false;
+        }
+    }
 
 
     public static boolean isPositiveInteger(String s) {

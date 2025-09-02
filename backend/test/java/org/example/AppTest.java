@@ -17,7 +17,7 @@ class AppTest {
         String toAvoid = "";
 
         Map<String, String> contactMetaData = new HashMap<>();
-        contactMetaData.put("avoid", toAvoid);
+        contactMetaData.put("avoidfields", toAvoid);
         contactMetaData.put("to_external", toExternal);
         ParseContact parse = new ParseContact();
 
@@ -32,7 +32,7 @@ class AppTest {
         String toAvoid = "";
 
         Map<String, String> contactMetaData = new HashMap<>();
-        contactMetaData.put("avoid", toAvoid);
+        contactMetaData.put("avoidfields", toAvoid);
         contactMetaData.put("to_external", toExternal);
         contactMetaData.put("devicespecifics", "fileAsMapping=LastCommaFirst");
         ParseContact parse = new ParseContact();
@@ -101,7 +101,7 @@ class AppTest {
         String toAvoid = "";
 
         Map<String, String> contactMetaData = new HashMap<>();
-        contactMetaData.put("avoid", toAvoid);
+        contactMetaData.put("avoidfields", toAvoid);
         contactMetaData.put("to_external", toExternal);
         contactMetaData.put("devicespecifics", "fileAsMapping=LastCommaFirst");
         ParseContact parse = new ParseContact();
@@ -117,7 +117,7 @@ class AppTest {
         ParseContact parse = new ParseContact();
 
         Map<String, String> contactMetaData = new HashMap<>();
-        contactMetaData.put("avoid", toAvoid);
+        contactMetaData.put("avoidfields", toAvoid);
         contactMetaData.put("to_external", toExternal);
         contactMetaData.put("devicespecifics", "fileAsMapping=LastCommaFirst");
         Contact contact = parse.getContact(newestAditoData, contactMetaData, true);

@@ -14,11 +14,12 @@ import java.util.Map;
 public class OutlookContactUpdater {
 
     // TODO:
-    //  - catch syncresult, store it in `SYNCABONNEMENT.syncresult`
+    //  - catch abo_syncresult, store it in `SYNCABONNEMENT.syncresult`
     //  - update `SYNCABONNEMENT.synced`, `SYNCABONNEMENT.changed`, `SYNCABONNEMENT.abostart` and `SYNCABONNEMENT.aboende`
     public static void updateContact(Map<String, String> contactMetaData, CONTACT_STATUS status)
     {
         String luid = contactMetaData.get("luid");
+        String syncabonnementid = contactMetaData.get("syncabonnementid");
         String device = contactMetaData.get("device");
         String userId = extractUserId(device); // user later with real data
         // rn always use mine so we're not messing up other peoples contacts lol
@@ -58,17 +59,24 @@ public class OutlookContactUpdater {
                         deleteContact(graphClient, luid);
                         System.out.println("\033[0;32mMOVED CONTACT:\nCONTACT:\n\tID: " + updatedContact.getId() + "\n\tNAME: " + updatedContact.getDisplayName() + "\nhas status TO_CREATE -> POST to Outlook\033[0m");
                         // TODO put new luid into adito db (updatedContact.getId())
+
                     }
                     else
                     {
                         updatedContact = patchContact(graphClient, contact, luid);
                         System.out.println("\033[0;33mCONTACT:\n\tID: " + updatedContact.getId() + "\n\tNAME: " + updatedContact.getDisplayName() + "\nhas status TO_CHANGE -> PATCH to Outlook\033[0m");
+
+                        DBConnector.updateDb("UPDATE syncabonnement SET synced = "+contactMetaData.get("changed")+" WHERE syncabonnementid = '"+syncabonnementid+"'");// todo test
+                        DBConnector.updateDb("UPDATE syncabonnement SET syncresult = 'ok' WHERE syncabonnementid = '"+syncabonnementid+"'");// todo test
+
                     }
                 }
                 case TO_CREATE -> {
                     updatedContact = postContact(graphClient, contact, contactFolderId);
                     System.out.println("\033[0;32mCONTACT:\n\tID: " + updatedContact.getId() + "\n\tNAME: " + updatedContact.getDisplayName() + "\nhas status TO_CREATE -> POST to Outlook\033[0m");
                     // TODO put new luid into adito db (updatedContact.getId())
+
+//                    DBConnector.updateDb();
                 }
                 case TO_DELETE -> {
                     deleteContact(graphClient, luid);
@@ -87,6 +95,7 @@ public class OutlookContactUpdater {
         {
             System.out.println("An error occurred while updating a contact in Outlook: " + e);
             e.printStackTrace();
+            DBConnector.updateDb("UPDATE syncabonnement SET syncresult = '"+ e+ "' WHERE syncabonnementid = '"+syncabonnementid+"'");// todo test
         }
     }
 

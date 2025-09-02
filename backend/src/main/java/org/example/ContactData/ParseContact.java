@@ -28,7 +28,7 @@ public class ParseContact
     // a contact from one folder to another. In that case we need the whole data to create a whole new contact (we delete old one)
     public Contact getContact(String aditoData, Map<String, String> contactMetaData, boolean ignoreIdenticalEntries) throws Exception {
         String toExternal = contactMetaData.get("to_external");
-        String avoidFields = contactMetaData.get("avoid");
+        String avoidFields = contactMetaData.get("avoidfields");
         String deviceSpecifics = contactMetaData.get("devicespecifics");
 
         Map<String, String> aditoMap = parseToMap(aditoData);

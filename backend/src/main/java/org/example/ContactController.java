@@ -39,18 +39,18 @@ public class ContactController {
     }
 
 
-    @GetMapping("/contacts")
-    public List<String> getContacts() {
-        return contactService.fetchContacts();
-    }
-
-
-    @GetMapping("/trigger")
-    public String triggerBackendLogic() {
-        // your backend logic here
-        System.out.println("Button was pressed! Running backend function...");
-
-        contactService.runRoutine();
-        return "Backend logic executed!";
-    }
+//    @GetMapping("/contacts")
+//    public List<String> getContacts() {
+//        return contactService.fetchContacts();
+//    }
+//
+//
+//    @GetMapping("/trigger")
+//    public String triggerBackendLogic() {
+//        // your backend logic here
+//        System.out.println("Button was pressed! Running backend function...");
+//
+//        contactService.runRoutine();
+//        return "Backend logic executed!";
+//    }
 }
