@@ -73,7 +73,38 @@ public class DBConnector implements AutoCloseable
     }
 
 
+    public static ResultSet getPrincipals() throws SQLException
+    {
+        System.out.println("check");
+        String query = "SELECT * FROM syncprincipal pri order by pri.syncprincipalid";
+        Connection connection = getInstance().getConnection();
+        Statement stmt = connection.createStatement();
+        return stmt.executeQuery(query);
+    }
 
+
+    public static ResultSet getContactDataFromPrincipalId(String principalId) throws SQLException
+    {
+        if (principalId == null || principalId.isBlank() || !isPositiveInteger(principalId))
+            return null;
+        System.out.println("received princ id: " + principalId);
+        String query = "select * from syncprincipal pri join syncabonnement abo on abo.principal = pri.syncprincipalid join syncdevice dev on dev.syncdeviceid = pri.syncdevice_id\n" +
+                "where pri.syncprincipalid = '"+principalId+"'";
+        Connection connection = getInstance().getConnection();
+        Statement stmt = connection.createStatement();
+        return stmt.executeQuery(query);
+    }
+
+
+
+    public static boolean isPositiveInteger(String s) {
+        try {
+            int n = Integer.parseInt(s);
+            return n > 0;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
 
 
     // TODO: this will not work yet, later when we work with the real Adito DB we can actually

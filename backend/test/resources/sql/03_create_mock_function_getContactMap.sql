@@ -10,7 +10,7 @@ BEGIN
         funktion=DEF(funktion)
         name=overridden
         geb=DEF(geb)
-        vorname=same
+        vorname=newname
         geb=DEF(geb)
         p_strasse=DEF(p_strasse)
         p_plz=DEF(p_plz)

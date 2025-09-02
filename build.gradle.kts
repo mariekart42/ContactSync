@@ -17,8 +17,19 @@ java {
     }
 }
 
+sourceSets {
+    named("main") {
+        java.srcDirs("backend/src/main/java")
+        resources.srcDirs("backend/src/main/resources")
+    }
+    named("test") {
+        java.srcDirs("backend/src/test/java")
+    }
+}
+
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
+    developmentOnly("org.springframework.boot:spring-boot-devtools")
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     implementation("com.azure:azure-identity:1.15.4")
@@ -31,4 +42,3 @@ dependencies {
 tasks.test {
     useJUnitPlatform()
 }
-

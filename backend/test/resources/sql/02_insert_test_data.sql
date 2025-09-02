@@ -130,13 +130,13 @@ insert into syncprincipal (SYNCPRINCIPALID, SYNCUSER_ID, SYNCDEVICE_ID, SYNCRESU
 values (3, 3, 3, 'ok');
 
 insert into syncprincipal (SYNCPRINCIPALID, SYNCUSER_ID, SYNCDEVICE_ID, SYNCRESULT)
-values (4, 4, 4, 'ok');
+values (4, 4, 3, 'ok');
 
 insert into syncprincipal (SYNCPRINCIPALID, SYNCUSER_ID, SYNCDEVICE_ID, SYNCRESULT)
-values (5, 5, 5, 'ok');
+values (5, 5, 3, 'ok');
 
 insert into syncprincipal (SYNCPRINCIPALID, SYNCUSER_ID, SYNCDEVICE_ID, SYNCRESULT)
-values (6, 6, 6, 'ok');
+values (6, 6, 3, 'ok');
 
 insert into syncprincipal (SYNCPRINCIPALID, SYNCUSER_ID, SYNCDEVICE_ID, SYNCRESULT)
 values (7, 7, 7, 'ok');
@@ -169,7 +169,7 @@ values (10, 10, 10, 'ok');
 
 -- 1. changed
 insert into syncabonnement (SYNCABONNEMENTID, PRINCIPAL, DBNAME, GUID, LUID, ABOSTART, ABOENDE, CHANGED, SYNCED, TO_EXTERNAL, FROM_EXTERNAL, SYNCRESULT)
-values (2, 2,  'person', '5500' , 'AAMkADg4NWM4MjMxLTc0ZjQtNGU4ZC05ZDc2LTgwMDJkNjAyNWE0YwBGAAAAAABb4L58lBuvQaM7Snxz45CZBwDKuT-HM9gZQIxqxJFFZgGEAAAAAAEOAADKuT-HM9gZQIxqxJFFZgGEAACPGe09AAA=', to_date('13-12-2010 12:00:05', 'dd-mm-yyyy hh24:mi:ss'), null, to_date('10-08-2023 17:15:29', 'dd-mm-yyyy hh24:mi:ss'), to_date('09-08-2023 17:15:29', 'dd-mm-yyyy hh24:mi:ss'), 'keymapversion=6
+values (2, 3,  'person', '5500' , 'AAMkADg4NWM4MjMxLTc0ZjQtNGU4ZC05ZDc2LTgwMDJkNjAyNWE0YwBGAAAAAABb4L58lBuvQaM7Snxz45CZBwDKuT-HM9gZQIxqxJFFZgGEAAAAAAEOAADKuT-HM9gZQIxqxJFFZgGEAACPGe09AAA=', to_date('13-12-2010 12:00:05', 'dd-mm-yyyy hh24:mi:ss'), null, to_date('10-08-2023 17:15:29', 'dd-mm-yyyy hh24:mi:ss'), to_date('09-08-2023 17:15:29', 'dd-mm-yyyy hh24:mi:ss'), 'keymapversion=6
 anrede=
 funktion=Inhaber/in
 name=OLD
@@ -231,7 +231,7 @@ info=', null, 'ok');
 
 -- 3. deleted
 insert into syncabonnement (SYNCABONNEMENTID, PRINCIPAL, DBNAME, GUID, LUID, ABOSTART, ABOENDE, CHANGED, SYNCED, TO_EXTERNAL, FROM_EXTERNAL, SYNCRESULT)
-values (9, 9,  'person', '151058', 'AAMkADg4NWM4MjMxLTc0ZjQtNGU4ZC05ZDc2LTgwMDJkNjAyNWE0YwBGAAAAAABb4L58lBuvQaM7Snxz45CZBwDKuT-HM9gZQIxqxJFFZgGEAAAAAAEOAADKuT-HM9gZQIxqxJFFZgGEAAAbPIQyAAA=', to_date('30-01-2023 10:37:17', 'dd-mm-yyyy hh24:mi:ss'), to_date('30-01-2023 10:37:17', 'dd-mm-yyyy hh24:mi:ss'), to_date('09-08-2023 17:16:28', 'dd-mm-yyyy hh24:mi:ss'), to_date('01-01-2023 17:16:28', 'dd-mm-yyyy hh24:mi:ss'), 'keymapversion=6
+values (9, 3,  'person', '151058', 'AAMkADg4NWM4MjMxLTc0ZjQtNGU4ZC05ZDc2LTgwMDJkNjAyNWE0YwBGAAAAAABb4L58lBuvQaM7Snxz45CZBwDKuT-HM9gZQIxqxJFFZgGEAAAAAAEOAADKuT-HM9gZQIxqxJFFZgGEAAAbPIQyAAA=', to_date('30-01-2023 10:37:17', 'dd-mm-yyyy hh24:mi:ss'), to_date('30-01-2023 10:37:17', 'dd-mm-yyyy hh24:mi:ss'), to_date('09-08-2023 17:16:28', 'dd-mm-yyyy hh24:mi:ss'), to_date('01-01-2023 17:16:28', 'dd-mm-yyyy hh24:mi:ss'), 'keymapversion=6
 anrede=override
 funktion=override
 name=override
