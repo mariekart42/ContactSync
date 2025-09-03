@@ -14,7 +14,6 @@ import java.util.Map;
 public class OutlookContactUpdater {
 
     // TODO:
-    //  - catch abo_syncresult, store it in `SYNCABONNEMENT.syncresult`
     //  - update `SYNCABONNEMENT.synced`, `SYNCABONNEMENT.changed`, `SYNCABONNEMENT.abostart` and `SYNCABONNEMENT.aboende`
     public static void updateContact(Map<String, String> contactMetaData, CONTACT_STATUS status)
     {
@@ -88,6 +87,11 @@ public class OutlookContactUpdater {
                     updatedContact = postContact(graphClient, contact, contactFolderId);
                     // TODO put new luid into adito db (updatedContact.getId())
 
+                    // db updated: set luid on new luid
+                    DBConnector.updateDb("UPDATE syncabonnement SET luid = "+updatedContact.getId()+" WHERE syncabonnementid = '"+syncabonnementid+"'");
+                    contactMetaData.put("luid", updatedContact.getId());
+
+
                     // db updates: synced = abostart
                     DBConnector.updateDb("UPDATE syncabonnement SET synced = "+contactMetaData.get("abostart")+" WHERE syncabonnementid = '"+syncabonnementid+"'");
                     contactMetaData.put("synced", contactMetaData.get("abostart"));
@@ -118,9 +122,10 @@ public class OutlookContactUpdater {
                         // db updates: synced = changed
                         DBConnector.updateDb("UPDATE syncabonnement SET synced = "+contactMetaData.get("changed")+" WHERE syncabonnementid = '"+syncabonnementid+"'");// todo test
                         contactMetaData.put("synced", contactMetaData.get("changed"));
-
+                        System.out.println("\033[0;36mCONTACT:\n\tID: " + updatedContact.getId() + "\n\tNAME: " + updatedContact.getDisplayName() + "\nhas status UNCHANGED -> only added AditoKontakte category\033[0m");
+                    } else {
+                        System.out.println("\033[0;36mCONTACT:\n\tID: " + luid + "\n\thas status UNCHANGED -> nothing to Outlook\033[0m");
                     }
-                    System.out.println("\033[0;36mCONTACT:\n\tID: " + updatedContact.getId() + "\n\tNAME: " + updatedContact.getDisplayName() + "\nhas status UNCHANGED -> nothing to Outlook\033[0m");
                 }
                 default -> throw new Exception("CONTACT_STATUS has unexpected value: " + status);
             }
@@ -129,15 +134,25 @@ public class OutlookContactUpdater {
             // db updates: abo.syncresult on ok
             DBConnector.updateDb("UPDATE syncabonnement SET syncresult = 'ok' WHERE syncabonnementid = '"+syncabonnementid+"'");// todo test
             contactMetaData.put("abo_syncresult", "ok");
+
+            // db updates: principal.syncresult on ok
+            //UPDATE syncprincipal p join syncabonnement s on s.principal = p.syncprincipalid SET p.syncresult = 'ok' WHERE s.syncabonnementid = '2'
+//            DBConnector.updateDb("UPDATE syncabonnement SET syncresult = 'ok' WHERE syncabonnementid = '"+syncabonnementid+"'");// todo test
+            DBConnector.updateDb("UPDATE syncprincipal p join syncabonnement s on s.principal = p.syncprincipalid SET p.syncresult = 'ok' WHERE s.syncabonnementid = '"+syncabonnementid+"'");// todo test
+            contactMetaData.put("principal_syncresult", "ok");
         }
         catch (Exception e)
         {
             System.out.println("An error occurred while updating a contact in Outlook: " + e);
-            e.printStackTrace();
+//            e.printStackTrace();
 
             // db updates: abo.syncresult on stacktrace
             DBConnector.updateDb("UPDATE syncabonnement SET syncresult = '"+ e+ "' WHERE syncabonnementid = '"+syncabonnementid+"'");// todo test
             contactMetaData.put("abo_syncresult", String.valueOf(e));
+
+            // db updates: principal.syncresult on stacktrace
+            DBConnector.updateDb("UPDATE syncprincipal p join syncabonnement s on s.principal = p.syncprincipalid SET p.syncresult = '"+e+"' WHERE s.syncabonnementid = '"+syncabonnementid+"'");// todo test
+            contactMetaData.put("principal_syncresult", String.valueOf(e));
         }
 
 

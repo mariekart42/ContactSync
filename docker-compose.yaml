@@ -1,5 +1,4 @@
 
-version: "3.9"
 services:
   db:
     image: postgres:14.4-alpine
@@ -17,26 +16,12 @@ services:
     build: ./backend
     depends_on:
       - db
-    environment:
-      MODE: web
+
     ports:
       - "8080:8080"
-    profiles: ["web"]
+    profiles: ["web", "standalone"]
+    command: ["--mode=${MODE}"]
 
-
-
-  backend-standalone: # runs without frontend
-    volumes:
-      - ./backend/src/resources/oAuth.properties:/app/src/main/resources/oAuth.properties
-    build: ./backend
-    depends_on:
-      - db
-    environment:
-      MODE: standalone
-    ports:
-      - "8080:8080"
-    command: ["--mode=standalone"]
-    profiles: ["standalone"]
 
   frontend:
     build: ./frontend/ContactSyncVue
@@ -44,3 +29,4 @@ services:
       - "8081:80"
     depends_on:
       - backend
+    profiles: ["web"]

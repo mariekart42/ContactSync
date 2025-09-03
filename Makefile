@@ -12,40 +12,54 @@ default:
 	@echo "  logs            : Follow logs of all containers"
 
 up: build
-	docker-compose --profile web -f docker-compose.yaml up -d
+	MODE=web docker compose down --remove-orphans || true
+	MODE=web docker compose --profile web up
 
 down:
-	docker-compose down
+	docker compose down
+
+re: fclean-all up
+
+fclean-all:
+	MODE=web docker compose down -v --remove-orphans || true
+	docker ps -aq | xargs -r docker rm -f
+	docker network prune -f
+	docker volume prune -f
+
 
 fclean:
-	docker-compose down -v
+	MODE=web docker compose down -v  --remove-orphans
+	MODE=web docker network prune -f
 
 build:
-	docker-compose --profile web build
+	MODE=web docker compose --profile web build
 
 # profile standalone: without frontend
 backend-build:
-	docker-compose --profile standalone build backend-standalone db
+	MODE=standalone docker compose --profile standalone build backend db
 
 # --no-deps: ignores dependent services -> frontend
 # --abort-on-container-exit --remove-orphans: stop and remove all containers
 backend-up: backend-build
-	docker-compose --profile standalone up --no-deps --abort-on-container-exit --remove-orphans backend-standalone db
+	MODE=standalone docker compose --profile standalone up --no-deps --abort-on-container-exit --remove-orphans backend db
+
+#	docker compose --profile standalone up --no-deps --abort-on-container-exit --remove-orphans backend db
+
 
 backend-down:
-	docker-compose --profile standalone down
+	MODE=standalone docker compose --profile standalone down
 
 backend-fclean:
-	docker-compose --profile standalone down -v
+	MODE=standalone docker compose --profile standalone down -v
+
 
 logs:
-	@docker-compose logs -f
+	@docker compose logs -f
 
-# ANSI color codes
 GREEN  := \033[0;32m
 RED    := \033[0;31m
 YELLOW := \033[0;33m
 CYAN   := \033[0;36m
-NC     := \033[0m # No Color
+NC     := \033[0m
 
 .PHONY: up down fclean build backend-build backend-up backend-down backend-fclean logs default

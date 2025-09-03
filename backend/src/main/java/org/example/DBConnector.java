@@ -67,7 +67,7 @@ public class DBConnector implements AutoCloseable
 
     public static ResultSet getContactData() throws SQLException
     {
-        String query = "select a.guid,a.luid,a.abostart,a.aboende,a.changed,a.synced,a.to_external,d.device,d.devicespecifics,d.avoidfields from syncabonnement a join syncprincipal p ON a.principal=p.syncprincipalid JOIN syncdevice d ON p.syncdevice_id=d.syncdeviceid";
+        String query = "select a.guid,a.syncabonnementid,a.luid,a.abostart,a.aboende,a.changed,a.synced,a.to_external,a.syncresult AS abo_syncresult,d.device,d.devicespecifics,d.avoidfields,p.syncresult AS principal_syncresult from syncabonnement a join syncprincipal p ON a.principal=p.syncprincipalid JOIN syncdevice d ON p.syncdevice_id=d.syncdeviceid";
         Connection connection = getInstance().getConnection();
         Statement stmt = connection.createStatement();
         return stmt.executeQuery(query);
