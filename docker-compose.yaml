@@ -17,8 +17,26 @@ services:
     build: ./backend
     depends_on:
       - db
+    environment:
+      MODE: web
     ports:
       - "8080:8080"
+    profiles: ["web"]
+
+
+
+  backend-standalone: # runs without frontend
+    volumes:
+      - ./backend/src/resources/oAuth.properties:/app/src/main/resources/oAuth.properties
+    build: ./backend
+    depends_on:
+      - db
+    environment:
+      MODE: standalone
+    ports:
+      - "8080:8080"
+    command: ["--mode=standalone"]
+    profiles: ["standalone"]
 
   frontend:
     build: ./frontend/ContactSyncVue
