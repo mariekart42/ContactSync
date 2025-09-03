@@ -47,6 +47,13 @@ fclean:
 
 
 
+
+# make only backend
+backend: compose-up
+	gradle bootRun
+
+
+
 logs:
 	@docker-compose -f $(COMPOSE_FILE) logs -f
 

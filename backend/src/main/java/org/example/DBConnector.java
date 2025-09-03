@@ -49,6 +49,7 @@ public class DBConnector implements AutoCloseable
     }
 
 
+
     Connection getConnection() {
         if (connection == null)
             return connection = getInstance().getConnection();
@@ -104,9 +105,10 @@ public class DBConnector implements AutoCloseable
     {
         try
         {
+            System.out.println("Query: " + query);
             Connection connection = getInstance().getConnection();
             Statement stmt = connection.createStatement();
-            stmt.executeQuery(query);
+            stmt.executeUpdate(query);
             return true;
         }
         catch (Exception e)
@@ -116,6 +118,27 @@ public class DBConnector implements AutoCloseable
             return false;
         }
     }
+
+//
+//    public  static void updateTimestamps(String syncabonnementid, String abostart, String aboende, String changed, String synced, AditoRequests.CONTACT_STATUS status)
+//    {
+//        switch (status)
+//        {
+//            case TO_CREATE -> {
+//                // synced = abostart
+//                //"UPDATE syncabonnement SET synced = "+changed+" WHERE syncabonnementid = '"+syncabonnementid+"'"
+//                updateDb("UPDATE syncabonnement SET synced = "+abostart+" WHERE syncabonnementid = '"+syncabonnementid+"'");
+//            }
+//        }
+//    }
+//
+//    public static void updateLuid(String syncabonnementid, String luid) {
+//        if (luid == null || luid.isBlank())
+//            luid = "[NULL]";
+//        updateDb("UPDATE syncabonnement SET luid = "+luid+" WHERE syncabonnementid = '"+syncabonnementid+"'");
+//    }
+//
+
 
 
     public static boolean isPositiveInteger(String s) {

@@ -1,6 +1,6 @@
 <template>
   <div class="container">
-    <h1>Principals</h1>
+    <h1>TEST Principals</h1>
 
 
 
@@ -60,7 +60,6 @@
               <th>device</th>
               <th>devicespecifics</th>
               <th>abo_syncresult</th>
-              <th>principal_syncresult</th>
             </tr>
             </thead>
             <tbody>
@@ -89,19 +88,6 @@
                   {{ item.abo_syncresult }}
                  </div>
               </td>
-              <td>
-                <div v-if="item.principal_syncresult === 'ok'"
-                     style="color: green"
-                     :title="item.principal_syncresult">
-                  {{ item.principal_syncresult }}
-                </div>
-                <div v-else
-                     style="max-width: 200px;  color: red; word-break: break-all"
-                     :title="item.principal_syncresult">
-                  {{ item.principal_syncresult }}
-                </div>
-              </td>
-
             </tr>
             </tbody>
           </table>

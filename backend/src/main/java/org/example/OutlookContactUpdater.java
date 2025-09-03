@@ -53,50 +53,94 @@ public class OutlookContactUpdater {
             switch (status)
             {
                 case TO_CHANGE -> {
-                    if (contactFolderChanged)
+                    if (contactFolderChanged) // contact moved to different folder
                     {
+
                         updatedContact = postContact(graphClient, contact, contactFolderId);
                         deleteContact(graphClient, luid);
+
+                        // db updated: new luid in luid
+                        DBConnector.updateDb("UPDATE syncabonnement SET luid = "+updatedContact.getId()+" WHERE syncabonnementid = '"+syncabonnementid+"'");
+                        contactMetaData.put("luid", updatedContact.getId());
+
+                        // db updated: synced = changed
+                        DBConnector.updateDb("UPDATE syncabonnement SET synced = "+contactMetaData.get("changed")+" WHERE syncabonnementid = '"+syncabonnementid+"'");
+                        contactMetaData.put("synced", contactMetaData.get("changed"));
+
+
                         System.out.println("\033[0;32mMOVED CONTACT:\nCONTACT:\n\tID: " + updatedContact.getId() + "\n\tNAME: " + updatedContact.getDisplayName() + "\nhas status TO_CREATE -> POST to Outlook\033[0m");
-                        // TODO put new luid into adito db (updatedContact.getId())
+
+
 
                     }
                     else
                     {
-                        updatedContact = patchContact(graphClient, contact, luid);
-                        System.out.println("\033[0;33mCONTACT:\n\tID: " + updatedContact.getId() + "\n\tNAME: " + updatedContact.getDisplayName() + "\nhas status TO_CHANGE -> PATCH to Outlook\033[0m");
+                        updatedContact = patchContact(graphClient, contact, contactMetaData);
 
+                        // db updates: synced = changed
                         DBConnector.updateDb("UPDATE syncabonnement SET synced = "+contactMetaData.get("changed")+" WHERE syncabonnementid = '"+syncabonnementid+"'");// todo test
-                        DBConnector.updateDb("UPDATE syncabonnement SET syncresult = 'ok' WHERE syncabonnementid = '"+syncabonnementid+"'");// todo test
+                        contactMetaData.put("synced", contactMetaData.get("changed"));
 
+                        System.out.println("\033[0;33mCONTACT:\n\tID: " + updatedContact.getId() + "\n\tNAME: " + updatedContact.getDisplayName() + "\nhas status TO_CHANGE -> PATCH to Outlook\033[0m");
                     }
                 }
                 case TO_CREATE -> {
                     updatedContact = postContact(graphClient, contact, contactFolderId);
-                    System.out.println("\033[0;32mCONTACT:\n\tID: " + updatedContact.getId() + "\n\tNAME: " + updatedContact.getDisplayName() + "\nhas status TO_CREATE -> POST to Outlook\033[0m");
                     // TODO put new luid into adito db (updatedContact.getId())
 
-//                    DBConnector.updateDb();
+                    // db updates: synced = abostart
+                    DBConnector.updateDb("UPDATE syncabonnement SET synced = "+contactMetaData.get("abostart")+" WHERE syncabonnementid = '"+syncabonnementid+"'");
+                    contactMetaData.put("synced", contactMetaData.get("abostart"));
+
+
+
+                    System.out.println("\033[0;32mCONTACT:\n\tID: " + updatedContact.getId() + "\n\tNAME: " + updatedContact.getDisplayName() + "\nhas status TO_CREATE -> POST to Outlook\033[0m");
+
                 }
                 case TO_DELETE -> {
                     deleteContact(graphClient, luid);
+
+                    // db updated: set luid on null
+                    DBConnector.updateDb("UPDATE syncabonnement SET luid = "+null+" WHERE syncabonnementid = '"+syncabonnementid+"'");
+                    contactMetaData.put("luid", null);
+
+                    // db updated: set synced = aboende
+                    DBConnector.updateDb("UPDATE syncabonnement SET synced = "+contactMetaData.get("aboende")+" WHERE syncabonnementid = '"+syncabonnementid+"'");
+                    contactMetaData.put("synced", contactMetaData.get("aboende"));
+
+
                     System.out.println("\033[0;31mCONTACT:\n\tID: " + luid + "\n\tNAME: " + contact.getDisplayName() + "\nhas status TO_DELETE -> DELETE to Outlook\033[0m");
-                    // TODO remove luid from adito db
                 }
                 case UNCHANGED -> {
-                    if (categoryUpdate)
-                        updatedContact = patchContact(graphClient, contact, luid);
+                    if (categoryUpdate) {
+                        updatedContact = patchContact(graphClient, contact, contactMetaData);
+
+                        // db updates: synced = changed
+                        DBConnector.updateDb("UPDATE syncabonnement SET synced = "+contactMetaData.get("changed")+" WHERE syncabonnementid = '"+syncabonnementid+"'");// todo test
+                        contactMetaData.put("synced", contactMetaData.get("changed"));
+
+                    }
                     System.out.println("\033[0;36mCONTACT:\n\tID: " + updatedContact.getId() + "\n\tNAME: " + updatedContact.getDisplayName() + "\nhas status UNCHANGED -> nothing to Outlook\033[0m");
                 }
                 default -> throw new Exception("CONTACT_STATUS has unexpected value: " + status);
             }
+
+
+            // db updates: abo.syncresult on ok
+            DBConnector.updateDb("UPDATE syncabonnement SET syncresult = 'ok' WHERE syncabonnementid = '"+syncabonnementid+"'");// todo test
+            contactMetaData.put("abo_syncresult", "ok");
         }
         catch (Exception e)
         {
             System.out.println("An error occurred while updating a contact in Outlook: " + e);
             e.printStackTrace();
+
+            // db updates: abo.syncresult on stacktrace
             DBConnector.updateDb("UPDATE syncabonnement SET syncresult = '"+ e+ "' WHERE syncabonnementid = '"+syncabonnementid+"'");// todo test
+            contactMetaData.put("abo_syncresult", String.valueOf(e));
         }
+
+
     }
 
     private static boolean hasContactFolderChanged(UserItemRequestBuilder graphClient, CONTACT_STATUS status, String folderId, String luid) throws Exception {
@@ -163,8 +207,17 @@ public class OutlookContactUpdater {
     }
 
 
-    private static Contact patchContact(UserItemRequestBuilder graphClient, Contact contact, String luid) {
-        return graphClient.contacts().byContactId(luid).patch(contact);
+    private static Contact patchContact(UserItemRequestBuilder graphClient, Contact contact, Map<String, String> contactMetaData) {
+        String luid = contactMetaData.get("luid");
+        String changed = contactMetaData.get("changed");
+        String syncabonnementid = contactMetaData.get("syncabonnementid");
+
+        Contact updatedContact = graphClient.contacts().byContactId(luid).patch(contact);
+
+
+
+
+        return updatedContact;
     }
 
 
@@ -292,6 +345,7 @@ public class OutlookContactUpdater {
     }
 
 
+    // functions validates that contact has category "AditoKontakte"
     private static boolean addAditoCategoryToContact(ContactsRequestBuilder contacts, Contact contact, String contactID, CONTACT_STATUS status)
     {
         if (status == CONTACT_STATUS.TO_DELETE)
