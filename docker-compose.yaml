@@ -16,7 +16,6 @@ services:
     build: ./backend
     depends_on:
       - db
-
     ports:
       - "8080:8080"
     profiles: ["web", "standalone"]
@@ -24,9 +23,11 @@ services:
 
 
   frontend:
-    build: ./frontend/ContactSyncVue
+    build:
+      context: ./frontend/ContactSyncVue
+      dockerfile: Dockerfile.dev  # Dockerfile.prod
     ports:
-      - "8081:80"
+      - "5173:5173" # "8081:80" # later for prod
     depends_on:
       - backend
     profiles: ["web"]

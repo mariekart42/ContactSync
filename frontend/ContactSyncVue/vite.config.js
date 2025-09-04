@@ -6,7 +6,7 @@ import vue from '@vitejs/plugin-vue'
 export default defineConfig({
     plugins: [vue()],
       server: {
-        proxy: {
+        proxy: { // proxy to backend
           '/principals': 'http://localhost:8080',
           '/submit': 'http://localhost:8080',
         }
