@@ -7,11 +7,9 @@ import com.microsoft.graph.serviceclient.GraphServiceClient;
 
 public class AppConfig {
 
-    public  GraphServiceClient getGraphServiceClient() throws Exception
+    public  GraphServiceClient getGraphServiceClient() throws IllegalArgumentException
     {
         GraphCredentials credentials = GraphCredentials.fromOAuthProperties();
-        if (credentials == null)
-            throw new Exception("Unable to retrieve Access Token.");
 
         final String scopes = credentials.getScope();
 
@@ -22,7 +20,7 @@ public class AppConfig {
                 .build();
 
         if (null == scopes || null == credential)
-            throw new Exception("Unable to retrieve valid Credentials");
+            throw new IllegalArgumentException("Unable to retrieve valid Credentials");
 
         return new GraphServiceClient(credential, scopes);
     }

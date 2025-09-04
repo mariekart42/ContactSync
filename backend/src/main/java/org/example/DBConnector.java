@@ -1,86 +1,110 @@
 package org.example;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.io.IOException;
+import java.io.InputStream;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 
+@Slf4j
 public class DBConnector implements AutoCloseable
 {
-    private static DBConnector instance;
-    private Connection connection;
+    private static DBConnector _instance;
+    private Connection _connection;
 
 
     private DBConnector()
     {
+        Properties props = loadProperties();
+        _connection = createConnection(props);
+    }
+
+
+    // Loads database configuration from oAuth.properties
+    private Properties loadProperties()
+    {
+        try (InputStream input = App.class.getResourceAsStream("/oAuth.properties"))
+        {
+            if (input == null)
+                throw new RuntimeException("Could not find /oAuth.properties file");
+
+            Properties props = new Properties();
+            props.load(input);
+            return props;
+        }
+        catch (IOException e)
+        {
+            log.error("\033[0;31mFailed to read oAuth.properties configuration\033[0m", e);
+            throw new RuntimeException("Failed to read oAuth.properties configuration", e);
+        }
+    }
+
+
+    // Creates a database connection using loaded properties
+    private Connection createConnection(Properties props)
+    {
+        String url = props.getProperty("postgres.url");
+        String username = props.getProperty("postgres.username");
+        String password = props.getProperty("postgres.password");
+
+        if (url == null || username == null || password == null)
+            throw new IllegalStateException("Database configuration missing in oAuth.properties");
+
         try
         {
-            final Properties oAuthProperties = new Properties();
-            oAuthProperties.load(App.class.getResourceAsStream("/oAuth.properties"));
-            String url = oAuthProperties.getProperty("postgres.url");
-            String username = oAuthProperties.getProperty("postgres.username");
-            String password = oAuthProperties.getProperty("postgres.password");
-            connection = DriverManager.getConnection(url, username, password);
+            return DriverManager.getConnection(url, username, password);
         }
         catch (SQLException e)
         {
-            e.printStackTrace();
-        }
-        catch (IOException e) {
-            System.out.println("Unable to read OAuth.properties configuration");
-            throw new RuntimeException(e);
+            log.error("\033[0;31mFailed to connect to database {} \033[0m", url, e);
+            throw new RuntimeException("Failed to connect to database", e);
         }
     }
 
 
     private static DBConnector getInstance()
     {
-        if (instance == null)
+        if (_instance == null)
         {
             synchronized (DBConnector.class)
             {
-                if (instance == null)
-                    instance = new DBConnector();
+                if (_instance == null)
+                    _instance = new DBConnector();
             }
         }
-        return instance;
+        return _instance;
     }
-
 
 
     Connection getConnection() {
-        if (connection == null)
-            return connection = getInstance().getConnection();
-        return connection;
+        if (_connection == null)
+            return _connection = getInstance().getConnection();
+        return _connection;
     }
 
 
-    public static ResultSet executeQuery(String query) throws SQLException
+    private static ResultSet executeQuery(String query) throws SQLException
     {
-        Connection connection = getInstance().getConnection();
-        Statement stmt = connection.createStatement();
-        return stmt.executeQuery(query);
+        return getFromDB(query);
     }
 
 
     public static ResultSet getContactData() throws SQLException
     {
         String query = "select a.guid,a.syncabonnementid,a.luid,a.abostart,a.aboende,a.changed,a.synced,a.to_external,a.syncresult AS abo_syncresult,d.device,d.devicespecifics,d.avoidfields,p.syncresult AS principal_syncresult from syncabonnement a join syncprincipal p ON a.principal=p.syncprincipalid JOIN syncdevice d ON p.syncdevice_id=d.syncdeviceid";
-        Connection connection = getInstance().getConnection();
-        Statement stmt = connection.createStatement();
-        return stmt.executeQuery(query);
+        return getFromDB(query);
     }
 
 
     public static ResultSet getPrincipals() throws SQLException
     {
-        System.out.println("check");
         String query = "SELECT pri.syncprincipalid, pri.syncuser_id, pri.syncdevice_id, pri.syncresult AS principal_syncresult FROM syncprincipal pri order by pri.syncprincipalid";
-        Connection connection = getInstance().getConnection();
-        Statement stmt = connection.createStatement();
-        return stmt.executeQuery(query);
+        return getFromDB(query);
     }
 
 
@@ -89,55 +113,103 @@ public class DBConnector implements AutoCloseable
         if (principalId == null || principalId.isBlank() || !isPositiveInteger(principalId))
             return null;
 
-        String query = "select dev.syncdeviceid, dev.device, dev.devicespecifics, dev.avoidfields, \n" +
-                "\tpri.syncprincipalid, pri.syncdevice_id, pri.syncresult AS principal_syncresult, \n" +
-                "    abo.syncabonnementid, abo.principal, abo.guid, abo.luid, abo.abostart, abo.aboende, abo.synced, abo.changed, abo.to_external, abo.syncresult AS abo_syncresult from syncprincipal pri join syncabonnement abo on abo.principal = pri.syncprincipalid join syncdevice dev on dev.syncdeviceid = pri.syncdevice_id where pri.syncprincipalid = '"+principalId+"'";
-        Connection connection = getInstance().getConnection();
-        Statement stmt = connection.createStatement();
-        return stmt.executeQuery(query);
+        String query = "select dev.syncdeviceid, dev.device, dev.devicespecifics, dev.avoidfields, pri.syncprincipalid, pri.syncdevice_id, pri.syncresult AS principal_syncresult, abo.syncabonnementid, abo.principal, abo.guid, abo.luid, abo.abostart, abo.aboende, abo.synced, abo.changed, abo.to_external, abo.syncresult AS abo_syncresult from syncprincipal pri join syncabonnement abo on abo.principal = pri.syncprincipalid join syncdevice dev on dev.syncdeviceid = pri.syncdevice_id where pri.syncprincipalid = '"+principalId+"'";
+
+        return getFromDB(query);
     }
 
 
-    // delete this function later and create a function for every action
-    // returns true if success
-    public static boolean updateDb(String query)
+    private static void updateDB(String query) throws SQLException
     {
         try
         {
-            System.out.println("Query: " + query);
             Connection connection = getInstance().getConnection();
             Statement stmt = connection.createStatement();
             stmt.executeUpdate(query);
-            return true;
         }
-        catch (Exception e)
+        catch (SQLException e)
         {
-            System.out.println("inside updateDb()");
-            e.printStackTrace();
-            return false;
+            throw new SQLException("An error occurred while making UPDATE to Database with following Statement: " + query);
         }
     }
 
-//
-//    public  static void updateTimestamps(String syncabonnementid, String abostart, String aboende, String changed, String synced, AditoRequests.CONTACT_STATUS status)
-//    {
-//        switch (status)
-//        {
-//            case TO_CREATE -> {
-//                // synced = abostart
-//                //"UPDATE syncabonnement SET synced = "+changed+" WHERE syncabonnementid = '"+syncabonnementid+"'"
-//                updateDb("UPDATE syncabonnement SET synced = "+abostart+" WHERE syncabonnementid = '"+syncabonnementid+"'");
-//            }
-//        }
-//    }
-//
-//    public static void updateLuid(String syncabonnementid, String luid) {
-//        if (luid == null || luid.isBlank())
-//            luid = "[NULL]";
-//        updateDb("UPDATE syncabonnement SET luid = "+luid+" WHERE syncabonnementid = '"+syncabonnementid+"'");
-//    }
-//
 
+    private static ResultSet getFromDB(String query) throws SQLException
+    {
+        try
+        {
+            Connection connection = getInstance().getConnection();
+            Statement stmt = connection.createStatement();
+            return stmt.executeQuery(query);
+        }
+        catch (SQLException e)
+        {
+            throw new SQLException("An error occurred while retrieving Data from Database with following Statement: " + query);
+        }
+    }
+
+
+
+
+    // give function the literal of with field (columnName), the value to change and the syncabonnementid on which syncabonnement to change
+    public static void updateSyncabonnementEntry(Map<String, String> contactMetaData, String columnName, String syncabonnementid, String value) throws SQLException, RuntimeException
+    {
+        String query = "UPDATE syncabonnement SET "+columnName+" = '"+value+"' WHERE syncabonnementid = '"+syncabonnementid+"'";
+        if (columnName == null || columnName.isBlank())
+            throw new IllegalArgumentException("Failed to execute UPDATE on: SYNCABONNEMENT because columnName was null or empty.");
+        if (syncabonnementid == null || syncabonnementid.isBlank())
+            throw new IllegalArgumentException("Failed to execute UPDATE on: SYNCABONNEMENT."+columnName+" because syncabonnementid was null or empty.");
+
+        try
+        {
+            if (value == null || value.isBlank())
+                query = "UPDATE syncabonnement SET "+columnName+" = null WHERE syncabonnementid = '"+syncabonnementid+"'";
+            DBConnector.updateDB(query);
+
+            if (columnName.equalsIgnoreCase(App.SYNCRESULT))
+                contactMetaData.put(App.ABO_SYNCRESULT, value);
+            else
+                contactMetaData.put(columnName, value);
+        }
+        catch (SQLException e)
+        {
+            throw e;// TODO figure out if there is a better way
+        }
+        catch (RuntimeException  e)
+        {
+            throw new RuntimeException("An error occurred while making an UPDATE to Table SYNCABONNEMENT." + columnName + e);
+        }
+    }
+
+
+    public static void updateSyncprincipalEntry(Map<String, String> contactMetaData, String columnName, String syncprincipalid, String value) throws SQLException, RuntimeException
+    {
+        String query = "UPDATE syncprincipal SET "+columnName+" = '"+value+"' WHERE syncprincipalid = '"+syncprincipalid+"'";
+        if (columnName == null || columnName.isBlank())
+            throw new IllegalArgumentException("Failed to execute UPDATE on: SYNCPRINCIPAL because columnName was null or empty.");
+        if (syncprincipalid == null || syncprincipalid.isBlank())
+            throw new IllegalArgumentException("Failed to execute UPDATE on: SYNCPRINCIPAL."+columnName+" because syncprincipalid was null or empty.");
+
+        try
+        {
+            if (value == null || value.isBlank())
+                query = "UPDATE syncprincipal SET "+columnName+" = null WHERE syncprincipalid = '"+syncprincipalid+"'";
+            DBConnector.updateDB(query);
+
+            if (columnName.equalsIgnoreCase(App.SYNCRESULT))
+                contactMetaData.put(App.PRINCIPAL_SYNCRESULT, value);
+            else
+                contactMetaData.put(columnName, value);
+        }
+        catch (SQLException e)
+        {
+            throw new SQLException(e);
+        }
+        catch (RuntimeException  e)
+        {
+            throw new RuntimeException ("An error occurred while making an UPDATE to Table SYNCPRINCIPAL." + columnName + e);
+        }
+    }
 
 
     public static boolean isPositiveInteger(String s) {
@@ -200,7 +272,6 @@ public class DBConnector implements AutoCloseable
     // fields that cant be avoided: mapversion, name, vorname, firma, strasse, ort, plz
     private static String extractLinesToAvoid(String data, String avoidFields)
     {
-        // Prepare the list of fields to avoid (e.g., mobile, bfax)
         if (avoidFields == null || avoidFields.isEmpty())
             return data; // check if i should return data or something else
 
@@ -208,33 +279,28 @@ public class DBConnector implements AutoCloseable
         List<String> toAvoid = new ArrayList<>();
         for (String part : parts)
         {
-            // Remove asterisks (*) from field names
             String fieldName = part.replace("*", "").trim();
             if (!fieldName.isEmpty())
                 toAvoid.add(fieldName);
         }
 
-        // Fields that should always be included
         List<String> alwaysInclude = List.of("mapversion", "name", "vorname", "firma", "strasse", "ort", "plz");
 
-        // New list to hold the lines that should be kept
         StringBuilder result = new StringBuilder();
         String[] lines = data.split("\n");
 
         for (String line : lines)
         {
-            // Each line looks like: "key=value"
             if (line.contains("=")) {
                 String key = line.substring(0, line.indexOf("=")).trim();
 
-                // If the key is in the avoid list and it's not in "always include", set value to an empty string
                 if (toAvoid.contains(key) && !alwaysInclude.contains(key))
-                    result.append("        ").append(key).append("=\n"); // Keep key, erase value
+                    result.append("        ").append(key).append("=\n");
                 else
                     result.append(line).append("\n");
             }
             else
-                result.append(line).append("\n"); // If there's no "=" in the line, just keep it (for cases like multiline strings)
+                result.append(line).append("\n");
         }
         return result.toString();
     }
@@ -244,14 +310,16 @@ public class DBConnector implements AutoCloseable
     {
         try
         {
-            if (connection != null && !connection.isClosed())
-                connection.close();
+            if (_connection != null && !_connection.isClosed())
+                _connection.close();
         }
         catch (SQLException e)
         {
-            e.printStackTrace();
+            log.error("\033[0;31mAn error occurred while closing Database Connection: \033[0m", e);
+            throw new RuntimeException(e);
         }
     }
+
 
     @Override
     public void close() {

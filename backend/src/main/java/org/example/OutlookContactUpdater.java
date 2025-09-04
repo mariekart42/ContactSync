@@ -3,23 +3,27 @@ package org.example;
 import com.microsoft.graph.models.Contact;
 import com.microsoft.graph.models.ContactFolder;
 import com.microsoft.graph.models.ContactFolderCollectionResponse;
+import com.microsoft.graph.models.odataerrors.ODataError;
 import com.microsoft.graph.users.item.UserItemRequestBuilder;
 import com.microsoft.graph.users.item.contacts.ContactsRequestBuilder;
+import lombok.extern.slf4j.Slf4j;
 import org.example.AditoRequests.CONTACT_STATUS;
 import org.example.ContactData.ParseContact;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 
 
+@Slf4j
 public class OutlookContactUpdater {
 
     // TODO:
     //  - update `SYNCABONNEMENT.synced`, `SYNCABONNEMENT.changed`, `SYNCABONNEMENT.abostart` and `SYNCABONNEMENT.aboende`
     public static void updateContact(Map<String, String> contactMetaData)
     {
-        String luid = contactMetaData.get("luid");
-        String syncabonnementid = contactMetaData.get("syncabonnementid");
-        String device = contactMetaData.get("device");
+        String luid = contactMetaData.get(App.LUID);
+        String syncabonnementid = contactMetaData.get(App.SYNCABONNEMENTID);
+        String device = contactMetaData.get(App.DEVICE);
         String userId = extractUserId(device); // user later with real data
         // rn always use mine so we're not messing up other peoples contacts lol
         userId = App.USER;
@@ -50,118 +54,69 @@ public class OutlookContactUpdater {
 
             boolean categoryUpdate = addAditoCategoryToContact(graphClient.contacts(), contact, luid, status);
 
-            Contact updatedContact = null;
-            switch (status)
-            {
-                case TO_CHANGE -> {
-                    if (contactFolderChanged) // contact moved to different folder
-                    {
+            if (categoryUpdate && status == CONTACT_STATUS.UNCHANGED)
+                status = CONTACT_STATUS.TO_CHANGE;
+            if (contactFolderChanged && status == CONTACT_STATUS.TO_CHANGE)
+                status = CONTACT_STATUS.TO_MOVE;
 
-                        updatedContact = postContact(graphClient, contact, contactFolderId);
-                        deleteContact(graphClient, luid);
+            updateContactToGraph(status, graphClient, contactMetaData, contact, contactFolderId);
 
-                        // db updated: new luid in luid
-                        DBConnector.updateDb("UPDATE syncabonnement SET luid = '"+updatedContact.getId()+"' WHERE syncabonnementid = '"+syncabonnementid+"'");
-                        contactMetaData.put("luid", updatedContact.getId());
-
-                        // db updated: synced = changed
-                        DBConnector.updateDb("UPDATE syncabonnement SET synced = '"+contactMetaData.get("changed")+"' WHERE syncabonnementid = '"+syncabonnementid+"'");
-                        contactMetaData.put("synced", contactMetaData.get("changed"));
-
-
-                        System.out.println("\033[0;32mMOVED CONTACT:\nCONTACT:\n\tID: " + updatedContact.getId() + "\n\tNAME: " + updatedContact.getDisplayName() + "\nhas status TO_CREATE -> POST to Outlook\033[0m");
-
-
-
-                    }
-                    else
-                    {
-                        updatedContact = patchContact(graphClient, contact, contactMetaData);
-
-                        // db updates: synced = changed
-                        DBConnector.updateDb("UPDATE syncabonnement SET synced = '"+contactMetaData.get("changed")+"' WHERE syncabonnementid = '"+syncabonnementid+"'");// todo test
-                        contactMetaData.put("synced", contactMetaData.get("changed"));
-
-                        System.out.println("\033[0;33mCONTACT:\n\tID: " + updatedContact.getId() + "\n\tNAME: " + updatedContact.getDisplayName() + "\nhas status TO_CHANGE -> PATCH to Outlook\033[0m");
-                    }
-                }
-                case TO_CREATE -> {
-                    updatedContact = postContact(graphClient, contact, contactFolderId);
-                    // TODO put new luid into adito db (updatedContact.getId())
-
-                    // db updated: set luid on new luid
-                    DBConnector.updateDb("UPDATE syncabonnement SET luid = '"+updatedContact.getId()+"' WHERE syncabonnementid = '"+syncabonnementid+"'");
-                    contactMetaData.put("luid", updatedContact.getId());
-
-
-                    // db updates: synced = abostart
-                    DBConnector.updateDb("UPDATE syncabonnement SET synced = '"+contactMetaData.get("abostart")+"' WHERE syncabonnementid = '"+syncabonnementid+"'");
-                    contactMetaData.put("synced", contactMetaData.get("abostart"));
-
-
-
-                    System.out.println("\033[0;32mCONTACT:\n\tID: " + updatedContact.getId() + "\n\tNAME: " + updatedContact.getDisplayName() + "\nhas status TO_CREATE -> POST to Outlook\033[0m");
-
-                }
-                case TO_DELETE -> {
-                    deleteContact(graphClient, luid);
-
-                    // db updated: set luid on null
-                    DBConnector.updateDb("UPDATE syncabonnement SET luid = null WHERE syncabonnementid = '"+syncabonnementid+"'");
-                    contactMetaData.put("luid", null);
-
-                    // db updated: set synced = aboende
-                    DBConnector.updateDb("UPDATE syncabonnement SET synced = '"+contactMetaData.get("aboende")+"' WHERE syncabonnementid = '"+syncabonnementid+"'");
-                    contactMetaData.put("synced", contactMetaData.get("aboende"));
-
-
-                    System.out.println("\033[0;31mCONTACT:\n\tID: " + luid + "\n\tNAME: " + contact.getDisplayName() + "\nhas status TO_DELETE -> DELETE to Outlook\033[0m");
-                }
-                case UNCHANGED -> {
-                    if (categoryUpdate) {
-                        updatedContact = patchContact(graphClient, contact, contactMetaData);
-
-                        // db updates: synced = changed
-                        DBConnector.updateDb("UPDATE syncabonnement SET synced = '"+contactMetaData.get("changed")+"' WHERE syncabonnementid = '"+syncabonnementid+"'");// todo test
-                        contactMetaData.put("synced", contactMetaData.get("changed"));
-                        System.out.println("\033[0;36mCONTACT:\n\tID: " + updatedContact.getId() + "\n\tNAME: " + updatedContact.getDisplayName() + "\nhas status UNCHANGED -> only added AditoKontakte category\033[0m");
-                    } else {
-                        System.out.println("\033[0;36mCONTACT:\n\tID: " + luid + "\n\thas status UNCHANGED -> nothing to Outlook\033[0m");
-                    }
-                }
-                default -> throw new Exception("CONTACT_STATUS has unexpected value: " + status);
-            }
-
-
-            // db updates: abo.syncresult on ok
-            DBConnector.updateDb("UPDATE syncabonnement SET syncresult = 'ok' WHERE syncabonnementid = '"+syncabonnementid+"'");// todo test
-            contactMetaData.put("abo_syncresult", "ok");
-
-            // db updates: principal.syncresult on ok
-            //UPDATE syncprincipal p join syncabonnement s on s.principal = p.syncprincipalid SET p.syncresult = 'ok' WHERE s.syncabonnementid = '2'
-//            DBConnector.updateDb("UPDATE syncabonnement SET syncresult = 'ok' WHERE syncabonnementid = '"+syncabonnementid+"'");// todo test
-
-//            DBConnector.updateDb("UPDATE syncprincipal p join syncabonnement s on s.principal = p.syncprincipalid SET p.syncresult = 'ok' WHERE s.syncabonnementid = '"+syncabonnementid+"'");// todo test
-//            contactMetaData.put("principal_syncresult", "ok");
+            DBConnector.updateSyncabonnementEntry(contactMetaData, App.SYNCRESULT, syncabonnementid, "ok");
         }
         catch (Exception e)
         {
-            System.out.println("An error occurred while updating a contact in Outlook: " + e);
-//            e.printStackTrace();
-
-            // db updates: abo.syncresult on stacktrace
-            DBConnector.updateDb("UPDATE syncabonnement SET syncresult = '"+ e+ "' WHERE syncabonnementid = '"+syncabonnementid+"'");// todo test
-            contactMetaData.put("abo_syncresult", String.valueOf(e));
-
-            // db updates: principal.syncresult on stacktrace
-            DBConnector.updateDb("UPDATE syncprincipal SET syncresult = '"+e+"'  WHERE syncprincipalid = '"+contactMetaData.get("syncprincipalid")+"'");// todo test
-            contactMetaData.put("principal_syncresult", String.valueOf(e));
+            if (e.getMessage().contains("The specified object was not found in the store."))
+                log.error("\033[0;31mcom.microsoft.graph.models.odataerrors.ODataError: The specified object was not found in the store. LUID: {}\033[0m", contactMetaData.get(App.LUID));
+            else
+                log.error("\033[0;31mAn error occurred while updating a contact in Outlook: \033[0m", e);
+            try
+            {
+                DBConnector.updateSyncabonnementEntry(contactMetaData, App.SYNCRESULT, syncabonnementid, String.valueOf(e));
+                DBConnector.updateSyncprincipalEntry(contactMetaData, App.SYNCRESULT, contactMetaData.get(App.SYNCPRINCIPALID), String.valueOf(e));
+            }
+            catch (SQLException se)
+            {
+                log.error("\033[0;31mAn SQLException occurred while updating a contact in Database: \033[0m", se);
+            }
+            catch (Exception ex)
+            {
+                log.error("\033[0;31mAn error occurred while updating a contact in Database, check if Database is up and running: \033[0m", ex);
+            }
         }
-
-
     }
 
-    private static boolean hasContactFolderChanged(UserItemRequestBuilder graphClient, CONTACT_STATUS status, String folderId, String luid) throws Exception {
+    private static void updateContactToGraph(CONTACT_STATUS status, UserItemRequestBuilder graphClient, Map<String, String> contactMetaData, Contact contact, String folderId) throws SQLException
+    {
+        String luid = contactMetaData.get(App.LUID);
+        Contact updatedContact;
+        switch (status)
+        {
+            case TO_CHANGE ->
+            {
+                updatedContact = patchContact(graphClient, contactMetaData, contact, luid);
+                log.info("\033[0;33mContact (id:{}) updated in Outlook\033[0m", updatedContact.getId());
+            }
+            case TO_MOVE ->
+            {
+                updatedContact = moveContact(graphClient, contactMetaData, contact, folderId);
+                log.info("\033[0;33mContact (old id:{}|new id:{}) got recreated in new Folder (id:{})\033[0m", luid, updatedContact.getId(), updatedContact.getParentFolderId());
+            }
+            case TO_CREATE ->
+            {
+                updatedContact = postContact(graphClient, contactMetaData, contact, folderId);
+                log.info("\033[0;33mContact (new id:{}) created in Outlook\033[0m", updatedContact.getId());
+            }
+            case TO_DELETE ->
+            {
+                deleteContact(graphClient, contactMetaData, luid);
+                log.info("\033[0;33mContact (old id:{}) deleted in Outlook\\033[0m", luid);
+            }
+            case UNCHANGED -> log.info("\033[0;33mContact (id:{}) no changes\033[0m", luid);
+        }
+    }
+
+
+    private static boolean hasContactFolderChanged(UserItemRequestBuilder graphClient, CONTACT_STATUS status, String folderId, String luid) {
         if (status != CONTACT_STATUS.TO_CHANGE) // keep if statements separated to reduce calls to isContactInFolder() (overhead)
             return false;
         return !isContactInFolder(graphClient, folderId, luid);
@@ -170,13 +125,13 @@ public class OutlookContactUpdater {
 
     // Checks whether the specified contactId exists in the given contactFolderId
     // If contactFolderId is null or empty, the check is performed in the default Outlook contact folder
-    private static boolean isContactInFolder(UserItemRequestBuilder graphClient, String contactFolderId, String contactId) throws Exception {
+    private static boolean isContactInFolder(UserItemRequestBuilder graphClient, String contactFolderId, String contactId) throws ODataError {
 
         if (contactFolderId == null || contactFolderId.isEmpty())
         { // contact is perhaps inside the default outlook folder
             var contactsInDefaultFolder = graphClient.contacts().get();
             if (contactsInDefaultFolder == null)
-                throw new Exception("Unable to retrieve Contact Data from MSGraph.");
+                throw new IllegalStateException("Unable to retrieve Contact Data from MSGraph.");
 
             if (contactsInDefaultFolder.getValue() == null || contactsInDefaultFolder.getValue().isEmpty()) // means there are no contacts in the default folder -> contact is obviously not there
                 return false;
@@ -191,7 +146,7 @@ public class OutlookContactUpdater {
 
         Contact contactData = graphClient.contacts().byContactId(contactId).get();
         if (contactData == null)
-            throw new Exception("Unable to retrieve Contact Data from MSGraph.");
+            throw new IllegalStateException("Unable to retrieve Contact Data from MSGraph.");
         else if (contactData.getParentFolderId() == null || contactData.getParentFolderId().isEmpty())
             return false;
         return contactData.getParentFolderId().equalsIgnoreCase(contactFolderId);
@@ -212,31 +167,56 @@ public class OutlookContactUpdater {
 
     // creates provided contact in the specified folderId
     // if folderId is null or empty, contact will be created in the default Outlook contact folder
-    private static Contact postContact(UserItemRequestBuilder graphClient, Contact contact, String folderId) {
+    private static Contact postContact(UserItemRequestBuilder graphClient, Map<String, String> contactMetaData,  Contact contact, String folderId) throws SQLException {
+        Contact updatedContact;
         if (folderId == null || folderId.isEmpty())// happens if device has no folder specified, eg device: mensing@kieback-peter.de/
-            return graphClient.contacts().post(contact);
+            updatedContact = graphClient.contacts().post(contact);
         else
-            return graphClient.contactFolders().byContactFolderId(folderId).contacts().post(contact);
-    }
+            updatedContact = graphClient.contactFolders().byContactFolderId(folderId).contacts().post(contact);
 
-
-    private static void deleteContact(UserItemRequestBuilder graphClient, String luid) {
-        graphClient.contacts().byContactId(luid).delete();
-    }
-
-
-    private static Contact patchContact(UserItemRequestBuilder graphClient, Contact contact, Map<String, String> contactMetaData) {
-        String luid = contactMetaData.get("luid");
-        String changed = contactMetaData.get("changed");
-        String syncabonnementid = contactMetaData.get("syncabonnementid");
-
-        Contact updatedContact = graphClient.contacts().byContactId(luid).patch(contact);
-
-
-
+        DBConnector.updateSyncabonnementEntry(contactMetaData, App.LUID, contactMetaData.get(App.SYNCABONNEMENTID), updatedContact.getId());// TODO updatedContact.getId() might cause NullPointerException, read in variable before and check for null
+        DBConnector.updateSyncabonnementEntry(contactMetaData, App.SYNCED, contactMetaData.get(App.SYNCABONNEMENTID), contactMetaData.get(App.ABOSTART));
 
         return updatedContact;
     }
+
+
+    private static void deleteContact(UserItemRequestBuilder graphClient, Map<String, String> contactMetaData, String luid) throws SQLException {
+        graphClient.contacts().byContactId(luid).delete();
+
+        DBConnector.updateSyncabonnementEntry(contactMetaData, App.LUID, contactMetaData.get(App.SYNCABONNEMENTID), null);
+        DBConnector.updateSyncabonnementEntry(contactMetaData, App.SYNCED, contactMetaData.get(App.SYNCABONNEMENTID), contactMetaData.get(App.ABOENDE));
+    }
+
+
+    private static Contact patchContact(UserItemRequestBuilder graphClient, Map<String, String> contactMetaData,  Contact contact, String luid) throws SQLException
+    {
+        Contact updatedContact = graphClient.contacts().byContactId(luid).patch(contact);
+
+        DBConnector.updateSyncabonnementEntry(contactMetaData, App.SYNCED, contactMetaData.get(App.SYNCABONNEMENTID), contactMetaData.get(App.CHANGED));
+
+        return updatedContact;
+    }
+
+
+
+    private static Contact moveContact(UserItemRequestBuilder graphClient, Map<String, String> contactMetaData, Contact contact, String folderId) throws SQLException
+    {
+        Contact updatedContact;
+        if (folderId == null || folderId.isEmpty())// happens if device has no folder specified, eg device: mensing@kieback-peter.de/
+            updatedContact = graphClient.contacts().post(contact);
+        else
+            updatedContact = graphClient.contactFolders().byContactFolderId(folderId).contacts().post(contact);
+
+        graphClient.contacts().byContactId(contactMetaData.get(App.LUID)).delete();
+
+        DBConnector.updateSyncabonnementEntry(contactMetaData, App.LUID, contactMetaData.get(App.SYNCABONNEMENTID), updatedContact.getId());// TODO updatedContact.getId() might cause NullPointerException, read in variable before and check for null
+        DBConnector.updateSyncabonnementEntry(contactMetaData, App.SYNCED, contactMetaData.get(App.SYNCABONNEMENTID), contactMetaData.get(App.CHANGED));
+
+        return contact;
+    }
+
+
 
 
     // Removes the user prefix from the device string and returns only the folder path
@@ -256,7 +236,7 @@ public class OutlookContactUpdater {
     // function recursively traverses through the folder tree based on 'device'
     // Creates missing folders if they do not exist
     // Handles cases where all, some, or none of the folders already exist
-    private static String ensureFolderExists(UserItemRequestBuilder graphClient, String parentFolderId, String device) throws Exception {
+    private static String ensureFolderExists(UserItemRequestBuilder graphClient, String parentFolderId, String device) throws RuntimeException {
 
         device = trimChar(device, '/');
 
@@ -284,7 +264,7 @@ public class OutlookContactUpdater {
     }
 
 
-    private static String findFolderId(UserItemRequestBuilder graphClient, String parentFolderId, String folderName) throws Exception {
+    private static String findFolderId(UserItemRequestBuilder graphClient, String parentFolderId, String folderName) throws IllegalStateException {
         // if parentFolderId is null or invalid/does not exist, function will throw error, caught by updateContact catch-block
         // TODO catch this error message and put it in the syncupdate
         ContactFolderCollectionResponse folderCollection;
@@ -295,7 +275,7 @@ public class OutlookContactUpdater {
             folderCollection = graphClient.contactFolders().byContactFolderId(parentFolderId).childFolders().get();
 
         if (folderCollection == null || folderCollection.getValue() == null)
-            throw new Exception("Unable to retrieve contactFolders from MSGraph.");
+            throw new IllegalStateException("Unable to retrieve contactFolders from MSGraph.");
         for (var folder : folderCollection.getValue()) // no null/empty check needed, see comment above
         {
             if (folder.getDisplayName() != null && folder.getDisplayName().equalsIgnoreCase(folderName))
@@ -305,7 +285,7 @@ public class OutlookContactUpdater {
     }
 
 
-    protected static String createFolders(UserItemRequestBuilder graphClient, String parentFolderId, String device) throws Exception {
+    protected static String createFolders(UserItemRequestBuilder graphClient, String parentFolderId, String device) throws RuntimeException  {
         if (device == null || device.isEmpty() || device.equalsIgnoreCase("/"))
             return parentFolderId;
 
@@ -327,24 +307,19 @@ public class OutlookContactUpdater {
                 try {
                     newFolderResponse = graphClient.contactFolders().post(newFolder);
                 } catch (Exception e) {
-                    throw new Exception("Failed to create new Folder: " + e); // TODO catch this error message with stack trace later and put in syncresult
+                    throw new RuntimeException("Failed to create new folder in MSGraph: " + e);
                 }
             }
             else
                 newFolderResponse = graphClient.contactFolders().byContactFolderId(parentFolderId).childFolders().post(newFolder);
 
             if (newFolderResponse == null)
-                throw new Exception("Failed to retrieve Folder Collection from MSGraph."); // TODO catch this error message with stack trace later and put in syncresult
+                throw new IllegalStateException("Failed to retrieve Folder Collection from MSGraph.");
             parentFolderId = newFolderResponse.getId();
         }
         return parentFolderId;
     }
 
-
-    protected static void deleteFolder(UserItemRequestBuilder graphClient, String folderId)
-    {
-        graphClient.contactFolders().byContactFolderId(folderId).delete();
-    }
 
 
     private static String trimChar(String str, Character toRemove)
@@ -370,7 +345,7 @@ public class OutlookContactUpdater {
             return false;
         if (status == CONTACT_STATUS.TO_CREATE)
         {
-            contact.setCategories(List.of("AditoKontakt"));
+            contact.setCategories(List.of(App.ADITO_CONTACTS_FOLDERNAME));
             return true;
         }
 
@@ -381,17 +356,16 @@ public class OutlookContactUpdater {
         }
         catch (Exception e)
         {
-            System.out.println("No contact found in Outlook for LUID: " + contactID);
-            return false;
+            log.error("\033[0;31mNo contact found in Outlook for LUID: {}\033[0m", contactID);
+            throw new IllegalArgumentException(e);
         }
 
         if (contactData != null)
         {
             List<String> categories = contactData.getCategories();
-            assert categories != null;
-            if (!categories.contains("AditoKontakt"))
+            if (categories != null && !categories.contains(App.ADITO_CONTACTS_FOLDERNAME))
             {
-                categories.add("AditoKontakt");
+                categories.add(App.ADITO_CONTACTS_FOLDERNAME);
                 contact.setCategories(categories);
                 return true;
             }

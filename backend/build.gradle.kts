@@ -28,6 +28,8 @@ sourceSets {
 }
 
 dependencies {
+    compileOnly("org.projectlombok:lombok:1.18.30")
+    annotationProcessor("org.projectlombok:lombok:1.18.30")
     implementation("org.springframework.boot:spring-boot-starter-web")
     developmentOnly("org.springframework.boot:spring-boot-devtools")
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
@@ -35,8 +37,6 @@ dependencies {
     implementation("com.azure:azure-identity:1.15.4")
     implementation("com.microsoft.graph:microsoft-graph:6.37.0")
     implementation("org.postgresql:postgresql:42.2.23")
-
-
 }
 
 tasks.test {

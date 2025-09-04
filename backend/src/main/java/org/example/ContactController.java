@@ -1,11 +1,9 @@
 package org.example;
 
-import com.azure.core.annotation.Get;
-import com.microsoft.graph.models.Contact;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 import java.util.Map;
+
 
 @RestController
 public class ContactController {
@@ -37,20 +35,4 @@ public class ContactController {
     public ContactController(App contactService) {
         this.contactService = contactService;
     }
-
-
-//    @GetMapping("/contacts")
-//    public List<String> getContacts() {
-//        return contactService.fetchContacts();
-//    }
-//
-//
-//    @GetMapping("/trigger")
-//    public String triggerBackendLogic() {
-//        // your backend logic here
-//        System.out.println("Button was pressed! Running backend function...");
-//
-//        contactService.runRoutine();
-//        return "Backend logic executed!";
-//    }
 }

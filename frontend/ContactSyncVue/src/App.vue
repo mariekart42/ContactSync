@@ -16,7 +16,7 @@
         <tr>
           <th>Sync</th>
           <th>syncprincipalid</th>
-<!--          <th>syncuser_id</th>-->
+<!--          <th>syncuserid</th>-->
           <th>syncdevice_id</th>
           <th>principal_syncresult</th>
         </tr>
@@ -29,7 +29,7 @@
             </button>
           </td>
           <td>{{ item.syncprincipalid }}</td>
-<!--          <td>{{ item.syncuser_id }}</td>-->
+<!--          <td>{{ item.syncuserid }}</td>-->
           <td>{{ item.syncdevice_id }}</td>
           <td :style="{ color: item.principal_syncresult !== 'ok' ? 'red' : 'green' }">
             {{ item.principal_syncresult }}

@@ -9,7 +9,7 @@ public class AditoRequests {
 
     public enum CONTACT_STATUS
     {
-        TO_CREATE, TO_CHANGE, TO_DELETE, UNCHANGED
+        TO_CREATE, TO_CHANGE, TO_DELETE, UNCHANGED, TO_MOVE
     }
 
     // with the information of abostart, aboende, changed and synced,
@@ -18,14 +18,13 @@ public class AditoRequests {
     //
      // contact Map structure:
     // | luid | abostart | aboende | changed | synced | to_external |
-    public static CONTACT_STATUS getContactStatus(Map<String, String> contact)
-    {
+    public static CONTACT_STATUS getContactStatus(Map<String, String> contact) throws Exception {
         try
         {
-            Date abostart = contact.get("abostart") != null ? Date.valueOf(contact.get("abostart")) : null;
-            Date aboende = contact.get("aboende") != null ? Date.valueOf(contact.get("aboende")) : null;
-            Date changed = contact.get("changed") != null ? Date.valueOf(contact.get("changed")) : null;
-            Date synced  = contact.get("synced") != null ? Date.valueOf(contact.get("synced")) : null;
+            Date abostart = contact.get(App.ABOSTART) != null ? Date.valueOf(contact.get(App.ABOSTART)) : null;
+            Date aboende = contact.get(App.ABOENDE) != null ? Date.valueOf(contact.get(App.ABOENDE)) : null;
+            Date changed = contact.get(App.CHANGED) != null ? Date.valueOf(contact.get(App.CHANGED)) : null;
+            Date synced  = contact.get(App.SYNCED) != null ? Date.valueOf(contact.get(App.SYNCED)) : null;
 
             // CHANGED: SYNCABONNEMENT.aboende` is NULL && `SYNCABONNEMENT.changed` > `SYNCABONNEMENT.synced`
             if (aboende == null && changed != null && changed.after(synced))
@@ -41,8 +40,7 @@ public class AditoRequests {
         }
         catch (Exception e)
         {
-            e.printStackTrace();
-            return null;
+            throw new Exception("An error occured while extracting contact data from DB data. Possible reason: Adito Contact Data for: "+contact.get(App.SYNCABONNEMENTID)+" is invalid." + e);
         }
         return CONTACT_STATUS.UNCHANGED;
     }
@@ -58,6 +56,6 @@ public class AditoRequests {
     // `get_latest_contact_properties(username varchar2) return varchar2`
     // avoid fields functionality is included afterward as a Java function
     public static String getResultFromMockSQLFunction(Map<String, String> contactMetaData) throws SQLException {
-        return DBConnector.executeMockGetContactMapSQLFunction(contactMetaData.get("guid"), contactMetaData.get("avoidfields"));
+        return DBConnector.executeMockGetContactMapSQLFunction(contactMetaData.get(App.GUID), contactMetaData.get(App.AVOIDFIELDS));
     }
 }

@@ -3,6 +3,7 @@ package org.example.ContactData;
 import com.microsoft.graph.models.Contact;
 import com.microsoft.graph.models.EmailAddress;
 import com.microsoft.graph.models.PhysicalAddress;
+import org.example.App;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -27,9 +28,9 @@ public class ParseContact
     // ignoreIdenticalEntries = true will also init duplicates in the contact object. This is important if we want to move
     // a contact from one folder to another. In that case we need the whole data to create a whole new contact (we delete old one)
     public Contact getContact(String aditoData, Map<String, String> contactMetaData, boolean ignoreIdenticalEntries) throws Exception {
-        String toExternal = contactMetaData.get("to_external");
-        String avoidFields = contactMetaData.get("avoidfields");
-        String deviceSpecifics = contactMetaData.get("devicespecifics");
+        String toExternal = contactMetaData.get(App.TO_EXTERNAL);
+        String avoidFields = contactMetaData.get(App.AVOIDFIELDS);
+        String deviceSpecifics = contactMetaData.get(App.DEVICESPECIFICS);
 
         Map<String, String> aditoMap = parseToMap(aditoData);
         Map<String, String> toExternalMap = parseToMap(toExternal);
@@ -76,7 +77,7 @@ public class ParseContact
             case "LastSpaceFirstCompany" -> contact.setFileAs(contact.getSurname()+" "+contact.getGivenName()+contact.getCompanyName()); // Nachname VornameFirma
             case null, default ->
             // TODO should the error if devicespecifics not found be in the syncresult? or just ignore?
-                throw new Exception("devicespecifics was defined wron in adito: " + devicespecifics);
+                throw new Exception("devicespecifics was defined wrong in adito: " + devicespecifics);
         }
     }
 
@@ -120,7 +121,7 @@ public class ParseContact
             case "name":
                 contact.setSurname(value); break;
             case "geb":
-                if (value.isEmpty() || !value.matches("\\d{4}-\\d{2}-\\d{2}.*")) contact.setBirthday(null);
+                if (!value.matches("\\d{4}-\\d{2}-\\d{2}.*")) contact.setBirthday(null);
                 else contact.setBirthday(OffsetDateTime.parse(value));
                 break;
             case "vorname":
@@ -204,66 +205,4 @@ public class ParseContact
         }
         return map;
     }
-
-
-    public Contact mergeContacts(Contact currentContact, Contact newContact, String deviceSpecifics) throws Exception {
-        if (newContact == null)
-            throw new Exception("Unable to retrieve Contact Data from MSGraph.");
-
-        addDataToContact(currentContact, "funktion", newContact.getJobTitle());
-//        addDataToContact(oldContact, "anrede", newContact.get);
-        addDataToContact(currentContact, "funktion", newContact.getJobTitle());
-        addDataToContact(currentContact, "name", newContact.getSurname());
-        if (newContact.getBirthday() != null)
-            addDataToContact(currentContact, "geb", newContact.getBirthday().toString());
-        addDataToContact(currentContact, "vorname", newContact.getGivenName());
-
-        if (newContact.getHomeAddress() != null)
-        {
-            addDataToContact(currentContact, "p_strasse", newContact.getHomeAddress().getStreet());
-            addDataToContact(currentContact, "p_plz", newContact.getHomeAddress().getPostalCode());
-            addDataToContact(currentContact, "p_ort", newContact.getHomeAddress().getCity());
-            addDataToContact(currentContact, "p_lkz", newContact.getHomeAddress().getState());
-        }
-
-        if (newContact.getBusinessPhones() != null)
-        {
-            if (!newContact.getBusinessPhones().isEmpty() && newContact.getBusinessPhones().getFirst() != null)
-                addDataToContact(currentContact, "bphone1", newContact.getBusinessPhones().getFirst());
-            if (newContact.getBusinessPhones().size() >= 2 && newContact.getBusinessPhones().get(1) != null)
-                addDataToContact(currentContact, "bphone2", newContact.getBusinessPhones().get(1));
-        }
-
-        addDataToContact(currentContact, "mobile", newContact.getMobilePhone());
-//        addDataToContact(oldContact, "carphone", override.get);
-//        addDataToContact(oldContact, "otherfax", override.get);
-//        addDataToContact(oldContact, "bfax", override.get);
-//        addDataToContact(oldContact, "companyphone", override.get);
-        addDataToContact(currentContact, "web", newContact.getBusinessHomePage());
-        addDataToContact(currentContact, "firma", newContact.getCompanyName());
-
-        if (newContact.getBusinessAddress() != null)
-        {
-            addDataToContact(currentContact, "strasse", newContact.getBusinessAddress().getStreet());
-            addDataToContact(currentContact, "ort", newContact.getBusinessAddress().getCity());
-            addDataToContact(currentContact, "plz", newContact.getBusinessAddress().getPostalCode());
-        }
-
-        if (newContact.getEmailAddresses() != null)
-        {
-            if (!newContact.getEmailAddresses().isEmpty() && newContact.getEmailAddresses().getFirst() != null)
-                addDataToContact(currentContact, "email1", String.valueOf(newContact.getEmailAddresses().getFirst()));
-            if (newContact.getEmailAddresses().size() >= 2 && newContact.getEmailAddresses().get(1) != null)
-                addDataToContact(currentContact, "email2", String.valueOf(newContact.getEmailAddresses().get(1)));
-            if (newContact.getEmailAddresses().size() >= 3 && newContact.getEmailAddresses().get(2) != null)
-                addDataToContact(currentContact, "email3", String.valueOf(newContact.getEmailAddresses().get(2)));
-        }
-        addDataToContact(currentContact, "info", newContact.getPersonalNotes());
-        setAddresses(currentContact);
-        setFileAsAttribute(currentContact, deviceSpecifics);
-        return currentContact;
-    }
-
-
-
 }
