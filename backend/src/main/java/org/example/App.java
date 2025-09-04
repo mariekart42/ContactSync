@@ -16,6 +16,7 @@ public class App {
     public static void syncContacts() {
         try
         {
+            // TODO change to get all principals and iterate through them
             ResultSet aboData = DBConnector.getContactData();
 
             while (aboData.next())
@@ -24,7 +25,7 @@ public class App {
 
                 var status = AditoRequests.getContactStatus(contactMetaData);
 
-                OutlookContactUpdater.updateContact(contactMetaData, status);
+                OutlookContactUpdater.updateContact(contactMetaData);
             }
         }
         catch (Exception e)
@@ -50,9 +51,16 @@ public class App {
                 Map<String, String> contactMetaData = getContactMetaData(principalData);
 
                 var status = AditoRequests.getContactStatus(contactMetaData);
-                OutlookContactUpdater.updateContact(contactMetaData, status);
+                OutlookContactUpdater.updateContact(contactMetaData);
 
-                contactMetaData.put("principal", principalData.getString("syncprincipalid"));
+                // TODO check here if
+                if (contactMetaData.get("principal_syncresult") == null || contactMetaData.get("principal_syncresult").isBlank())
+                {
+                    DBConnector.updateDb("UPDATE syncprincipal SET syncresult = 'ok' WHERE syncprincipalid = '"+principalData.getString("syncprincipalid")+"'");// todo test
+                    contactMetaData.put("principal_syncresult", "ok");
+                }
+
+                contactMetaData.put("syncprincipalid", principalData.getString("syncprincipalid"));
                 replaceEmptyWithNull(contactMetaData); // so we can show null in frontend
                 contactData.add(contactMetaData);
             }
@@ -112,9 +120,11 @@ public class App {
         map.put("to_external", aboData.getString("to_external"));
         map.put("avoidfields", aboData.getString("avoidfields"));
         map.put("device", aboData.getString("device"));
-        map.put("abo_syncresult", aboData.getString("abo_syncresult"));
-        map.put("principal_syncresult", aboData.getString("principal_syncresult"));
+        map.put("abo_syncresult", null);
+        map.put("principal_syncresult", null);
         map.put("devicespecifics", aboData.getString("devicespecifics"));
+        map.put("syncprincipalid", aboData.getString("syncprincipalid"));
+
         return map;
     }
 }

@@ -86,10 +86,9 @@ public class DBConnector implements AutoCloseable
 
     public static ResultSet getContactDataFromPrincipalId(String principalId) throws SQLException
     {
-        System.out.println("inside getContactDataFromPrincipalId() db function");
         if (principalId == null || principalId.isBlank() || !isPositiveInteger(principalId))
             return null;
-        System.out.println("received princ id: " + principalId);
+
         String query = "select dev.syncdeviceid, dev.device, dev.devicespecifics, dev.avoidfields, \n" +
                 "\tpri.syncprincipalid, pri.syncdevice_id, pri.syncresult AS principal_syncresult, \n" +
                 "    abo.syncabonnementid, abo.principal, abo.guid, abo.luid, abo.abostart, abo.aboende, abo.synced, abo.changed, abo.to_external, abo.syncresult AS abo_syncresult from syncprincipal pri join syncabonnement abo on abo.principal = pri.syncprincipalid join syncdevice dev on dev.syncdeviceid = pri.syncdevice_id where pri.syncprincipalid = '"+principalId+"'";

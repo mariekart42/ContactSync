@@ -10,6 +10,8 @@ import java.util.Arrays;
 public class ContactSyncApplication {
     public static void main(String[] args) {
 
+        System.out.println("\033[0;33mENTRY ContactSyncApplication\033[0m");
+
         SpringApplication app = new SpringApplication(ContactSyncApplication.class);
 
         // Determine if running in standalone mode
@@ -21,10 +23,12 @@ public class ContactSyncApplication {
             app.setWebApplicationType(WebApplicationType.NONE);
         }
 
+        System.out.println("\033[0;33mApp logic WITH frontend\033[0m");
         ConfigurableApplicationContext context = app.run(args);
 
         // only backend logic is executed one time, program terminates afterward
         if (standalone) {
+            System.out.println("\033[0;33mApp logic without frontend\033[0m");
             App.syncContacts();
             context.close();
         }

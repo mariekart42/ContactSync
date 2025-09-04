@@ -15,7 +15,7 @@ public class OutlookContactUpdater {
 
     // TODO:
     //  - update `SYNCABONNEMENT.synced`, `SYNCABONNEMENT.changed`, `SYNCABONNEMENT.abostart` and `SYNCABONNEMENT.aboende`
-    public static void updateContact(Map<String, String> contactMetaData, CONTACT_STATUS status)
+    public static void updateContact(Map<String, String> contactMetaData)
     {
         String luid = contactMetaData.get("luid");
         String syncabonnementid = contactMetaData.get("syncabonnementid");
@@ -36,6 +36,8 @@ public class OutlookContactUpdater {
 
             Contact contact;
             ParseContact parse = new ParseContact();
+
+            CONTACT_STATUS status = AditoRequests.getContactStatus(contactMetaData);
 
             boolean contactFolderChanged = hasContactFolderChanged(graphClient, status, contactFolderId, luid);
             if (contactFolderChanged)
@@ -59,11 +61,11 @@ public class OutlookContactUpdater {
                         deleteContact(graphClient, luid);
 
                         // db updated: new luid in luid
-                        DBConnector.updateDb("UPDATE syncabonnement SET luid = "+updatedContact.getId()+" WHERE syncabonnementid = '"+syncabonnementid+"'");
+                        DBConnector.updateDb("UPDATE syncabonnement SET luid = '"+updatedContact.getId()+"' WHERE syncabonnementid = '"+syncabonnementid+"'");
                         contactMetaData.put("luid", updatedContact.getId());
 
                         // db updated: synced = changed
-                        DBConnector.updateDb("UPDATE syncabonnement SET synced = "+contactMetaData.get("changed")+" WHERE syncabonnementid = '"+syncabonnementid+"'");
+                        DBConnector.updateDb("UPDATE syncabonnement SET synced = '"+contactMetaData.get("changed")+"' WHERE syncabonnementid = '"+syncabonnementid+"'");
                         contactMetaData.put("synced", contactMetaData.get("changed"));
 
 
@@ -77,7 +79,7 @@ public class OutlookContactUpdater {
                         updatedContact = patchContact(graphClient, contact, contactMetaData);
 
                         // db updates: synced = changed
-                        DBConnector.updateDb("UPDATE syncabonnement SET synced = "+contactMetaData.get("changed")+" WHERE syncabonnementid = '"+syncabonnementid+"'");// todo test
+                        DBConnector.updateDb("UPDATE syncabonnement SET synced = '"+contactMetaData.get("changed")+"' WHERE syncabonnementid = '"+syncabonnementid+"'");// todo test
                         contactMetaData.put("synced", contactMetaData.get("changed"));
 
                         System.out.println("\033[0;33mCONTACT:\n\tID: " + updatedContact.getId() + "\n\tNAME: " + updatedContact.getDisplayName() + "\nhas status TO_CHANGE -> PATCH to Outlook\033[0m");
@@ -88,12 +90,12 @@ public class OutlookContactUpdater {
                     // TODO put new luid into adito db (updatedContact.getId())
 
                     // db updated: set luid on new luid
-                    DBConnector.updateDb("UPDATE syncabonnement SET luid = "+updatedContact.getId()+" WHERE syncabonnementid = '"+syncabonnementid+"'");
+                    DBConnector.updateDb("UPDATE syncabonnement SET luid = '"+updatedContact.getId()+"' WHERE syncabonnementid = '"+syncabonnementid+"'");
                     contactMetaData.put("luid", updatedContact.getId());
 
 
                     // db updates: synced = abostart
-                    DBConnector.updateDb("UPDATE syncabonnement SET synced = "+contactMetaData.get("abostart")+" WHERE syncabonnementid = '"+syncabonnementid+"'");
+                    DBConnector.updateDb("UPDATE syncabonnement SET synced = '"+contactMetaData.get("abostart")+"' WHERE syncabonnementid = '"+syncabonnementid+"'");
                     contactMetaData.put("synced", contactMetaData.get("abostart"));
 
 
@@ -105,11 +107,11 @@ public class OutlookContactUpdater {
                     deleteContact(graphClient, luid);
 
                     // db updated: set luid on null
-                    DBConnector.updateDb("UPDATE syncabonnement SET luid = "+null+" WHERE syncabonnementid = '"+syncabonnementid+"'");
+                    DBConnector.updateDb("UPDATE syncabonnement SET luid = null WHERE syncabonnementid = '"+syncabonnementid+"'");
                     contactMetaData.put("luid", null);
 
                     // db updated: set synced = aboende
-                    DBConnector.updateDb("UPDATE syncabonnement SET synced = "+contactMetaData.get("aboende")+" WHERE syncabonnementid = '"+syncabonnementid+"'");
+                    DBConnector.updateDb("UPDATE syncabonnement SET synced = '"+contactMetaData.get("aboende")+"' WHERE syncabonnementid = '"+syncabonnementid+"'");
                     contactMetaData.put("synced", contactMetaData.get("aboende"));
 
 
@@ -120,7 +122,7 @@ public class OutlookContactUpdater {
                         updatedContact = patchContact(graphClient, contact, contactMetaData);
 
                         // db updates: synced = changed
-                        DBConnector.updateDb("UPDATE syncabonnement SET synced = "+contactMetaData.get("changed")+" WHERE syncabonnementid = '"+syncabonnementid+"'");// todo test
+                        DBConnector.updateDb("UPDATE syncabonnement SET synced = '"+contactMetaData.get("changed")+"' WHERE syncabonnementid = '"+syncabonnementid+"'");// todo test
                         contactMetaData.put("synced", contactMetaData.get("changed"));
                         System.out.println("\033[0;36mCONTACT:\n\tID: " + updatedContact.getId() + "\n\tNAME: " + updatedContact.getDisplayName() + "\nhas status UNCHANGED -> only added AditoKontakte category\033[0m");
                     } else {
@@ -138,8 +140,9 @@ public class OutlookContactUpdater {
             // db updates: principal.syncresult on ok
             //UPDATE syncprincipal p join syncabonnement s on s.principal = p.syncprincipalid SET p.syncresult = 'ok' WHERE s.syncabonnementid = '2'
 //            DBConnector.updateDb("UPDATE syncabonnement SET syncresult = 'ok' WHERE syncabonnementid = '"+syncabonnementid+"'");// todo test
-            DBConnector.updateDb("UPDATE syncprincipal p join syncabonnement s on s.principal = p.syncprincipalid SET p.syncresult = 'ok' WHERE s.syncabonnementid = '"+syncabonnementid+"'");// todo test
-            contactMetaData.put("principal_syncresult", "ok");
+
+//            DBConnector.updateDb("UPDATE syncprincipal p join syncabonnement s on s.principal = p.syncprincipalid SET p.syncresult = 'ok' WHERE s.syncabonnementid = '"+syncabonnementid+"'");// todo test
+//            contactMetaData.put("principal_syncresult", "ok");
         }
         catch (Exception e)
         {
@@ -151,7 +154,7 @@ public class OutlookContactUpdater {
             contactMetaData.put("abo_syncresult", String.valueOf(e));
 
             // db updates: principal.syncresult on stacktrace
-            DBConnector.updateDb("UPDATE syncprincipal p join syncabonnement s on s.principal = p.syncprincipalid SET p.syncresult = '"+e+"' WHERE s.syncabonnementid = '"+syncabonnementid+"'");// todo test
+            DBConnector.updateDb("UPDATE syncprincipal SET syncresult = '"+e+"'  WHERE syncprincipalid = '"+contactMetaData.get("syncprincipalid")+"'");// todo test
             contactMetaData.put("principal_syncresult", String.valueOf(e));
         }
 
