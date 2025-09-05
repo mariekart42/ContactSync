@@ -40,7 +40,7 @@ public class AditoRequests {
         }
         catch (Exception e)
         {
-            throw new Exception("An error occured while extracting contact data from DB data. Possible reason: Adito Contact Data for: "+contact.get(App.SYNCABONNEMENTID)+" is invalid." + e);
+            throw new Exception("An error occurred while extracting contact data from DB data. Possible reason: Adito Contact Data for: "+contact.get(App.SYNCABONNEMENTID)+" is invalid." + e);
         }
         return CONTACT_STATUS.UNCHANGED;
     }

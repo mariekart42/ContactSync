@@ -63,12 +63,16 @@ public class OutlookContactUpdater {
 
             DBConnector.updateSyncabonnementEntry(contactMetaData, App.SYNCRESULT, syncabonnementid, "ok");
         }
+        catch (NullPointerException ne)
+        {
+            log.error("\033[0;31mA NullPointerException occurred while updating a contact in Outlook: {}\033[0m", String.valueOf(ne));
+        }
         catch (Exception e)
         {
             if (e.getMessage().contains("The specified object was not found in the store."))
                 log.error("\033[0;31mcom.microsoft.graph.models.odataerrors.ODataError: The specified object was not found in the store. LUID: {}\033[0m", contactMetaData.get(App.LUID));
             else
-                log.error("\033[0;31mAn error occurred while updating a contact in Outlook: \033[0m", e);
+                log.error("\033[0;31mAn error occurred while updating a contact in Outlook: {}\033[0m", String.valueOf(e));
             try
             {
                 DBConnector.updateSyncabonnementEntry(contactMetaData, App.SYNCRESULT, syncabonnementid, String.valueOf(e));
@@ -181,7 +185,8 @@ public class OutlookContactUpdater {
     }
 
 
-    private static void deleteContact(UserItemRequestBuilder graphClient, Map<String, String> contactMetaData, String luid) throws SQLException {
+    private static void deleteContact(UserItemRequestBuilder graphClient, Map<String, String> contactMetaData, String luid) throws SQLException
+    {
         graphClient.contacts().byContactId(luid).delete();
 
         DBConnector.updateSyncabonnementEntry(contactMetaData, App.LUID, contactMetaData.get(App.SYNCABONNEMENTID), null);
@@ -339,9 +344,9 @@ public class OutlookContactUpdater {
 
 
     // functions validates that contact has category "AditoKontakte"
-    private static boolean addAditoCategoryToContact(ContactsRequestBuilder contacts, Contact contact, String contactID, CONTACT_STATUS status)
+    private static boolean addAditoCategoryToContact(ContactsRequestBuilder contacts, Contact contact, String contactID, CONTACT_STATUS status) throws IllegalArgumentException
     {
-        if (status == CONTACT_STATUS.TO_DELETE)
+        if (status == CONTACT_STATUS.TO_DELETE || contactID == null)
             return false;
         if (status == CONTACT_STATUS.TO_CREATE)
         {
@@ -356,8 +361,7 @@ public class OutlookContactUpdater {
         }
         catch (Exception e)
         {
-            log.error("\033[0;31mNo contact found in Outlook for LUID: {}\033[0m", contactID);
-            throw new IllegalArgumentException(e);
+            throw new IllegalArgumentException("No contact found in Outlook for LUID: " +contactID + "\n");
         }
 
         if (contactData != null)

@@ -2,7 +2,10 @@
   <div class="container">
     <h1>Principals</h1>
 
-
+    <div v-if="loading" class="overlay">
+      <div class="spinner"></div>
+      <p>Syncing Contact...</p>
+    </div>
 
 
 
@@ -24,7 +27,7 @@
         <tbody>
         <tr v-for="(item, index) in principalData" :key="index">
           <td>
-            <button @click="syncPrincipal(item.syncprincipalid)">
+            <button @click="syncPrincipal(item.syncprincipalid)" :disabled="loading">
               sync
             </button>
           </td>
@@ -104,46 +107,6 @@
       <p :style="{ color: 'red' }">Error while fetching Principal Data: {{ errorMessage }}</p>
     </div>
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    <!--    <div>-->
-<!--      <div v-if="contactData.length === 0">-->
-<!--        Principal has no data-->
-<!--      </div>-->
-
-<!--      <div v-else>-->
-<!--        <div-->
-<!--            v-for="(map, index) in contactData"-->
-<!--            :key="index"-->
-<!--            class="map-container"-->
-<!--        >-->
-<!--          <h3>Eintrag {{ index + 1 }}</h3>-->
-<!--          <ul>-->
-<!--            <li v-for="(value, key) in map" :key="key">-->
-<!--              <strong>{{ key }}:</strong> {{ value }}-->
-<!--            </li>-->
-<!--          </ul>-->
-<!--        </div>-->
-<!--      </div>-->
-<!--    </div>-->
-
-<!--    <input v-model="message" placeholder="Type something..." />-->
-<!--    <button @click="sendMessage">Send</button>-->
-<!--    <p v-if="response">Backend response: {{ response }}</p>-->
   </div>
 </template>
 
@@ -162,6 +125,9 @@ const errorMessage = ref(null)
 
 const tooltipText = ref('Click to copy')
 
+
+const loading = ref(false);
+
 function copyText(text, event) {
   navigator.clipboard.writeText(text)
       .then(() => {
@@ -177,10 +143,15 @@ function copyText(text, event) {
 
 // Fetch data on page load
 onMounted(async () => {
+  await getPrincipalData();
+})
+
+
+async function getPrincipalData()
+{
   try {
-    // principalData.value = null;
+    loading.value = true
     const res = await fetch('http://localhost:8080/principals')
-    // replace with your backend endpoint
     if (!res.ok) throw new Error(`Error ${res.status}`)
 
     const data = await res.json();
@@ -194,19 +165,14 @@ onMounted(async () => {
       errorMessage.value = null
       principalData.value = data
     }
-
-
-
-    // principalData.value = null;
-    // errorMessage.value = "Could not load principal data."
-    // console.log(principalData)
-    // console.log(principalData.value)
   } catch (err) {
     console.error('Error fetching initial data:', err)
     principalData.value = [];
     errorMessage.value = "Could not load principal data."
+  } finally {
+    loading.value = false;
   }
-})
+}
 
 
 
@@ -217,6 +183,7 @@ async function syncPrincipal(item)
   contactData.value = []
 
   try {
+    loading.value = true
     const res = await fetch(`http://localhost:8080/getContactDataFromPrincipalId?principalId=${encodeURIComponent(item)}`)
 
     if (!res.ok)
@@ -232,10 +199,13 @@ async function syncPrincipal(item)
     else {
       errorMessage.value = null
       contactData.value = data
+      await getPrincipalData();
     }
   } catch (err) {
     console.error('Error fetching contact data:', err)
     errorMessage.value = "Could not load contact data."
+  } finally {
+    loading.value = false
   }
 }
 
@@ -268,5 +238,35 @@ button {
 p {
   margin-top: 20px;
   color: green;
+}
+
+/* Overlay blocks the whole page */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+/* Spinner animation */
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid #ddd;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 10px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 </style>

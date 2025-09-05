@@ -15,7 +15,7 @@ public class App {
 
     public static final String SYNCPRINCIPALID = "syncprincipalid";
     public static final String SYNCDEVICE_ID = "syncdevice_id";
-    public static final String SYNCUSERID = "syncuserid";
+    public static final String SYNCUSERID = "syncuser_id";
     public static final String PRINCIPAL_SYNCRESULT = "principal_syncresult";
     public static final String SYNCRESULT = "syncresult";
     public static final String ABO_SYNCRESULT = "abo_syncresult";
